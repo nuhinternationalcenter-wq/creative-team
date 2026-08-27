@@ -1,6 +1,7 @@
 import React from 'react';
 import { Users, Filter, X, Sparkles } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
+import { getMemberColorStyle } from '../utils/memberColor';
 
 export const RoleFilterBar: React.FC = () => {
   const { members, updateMember, selectedRole, setSelectedRole, activeProject, personalTasks } = useWork();
@@ -60,7 +61,7 @@ export const RoleFilterBar: React.FC = () => {
               >
                 <span 
                   className={`w-2.5 h-2.5 rounded-full shrink-0 ${isSelected ? 'bg-white' : ''}`} 
-                  style={!isSelected ? { backgroundColor: m.color || '#3b82f6' } : undefined} 
+                  style={!isSelected ? { backgroundColor: m.color || getMemberColorStyle(m).hex } : undefined} 
                 />
                 <span>{m.name}</span>
                 {counts.chainCount > 0 && (

@@ -37,6 +37,7 @@ import {
 import { ChainStep, TeamChainProject, StepStatus, TaskAttachment, TeamMember } from '../types';
 import { useWork } from '../context/WorkContext';
 import { getMemberColorStyle } from '../utils/memberColor';
+import { openExternalUrl } from '../utils/url';
 import { CreateStepModal } from './CreateStepModal';
 import { EditStepModal } from './EditStepModal';
 import { CompletedHistoryModal } from './CompletedHistoryModal';
@@ -888,7 +889,7 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                                   if (att.type === 'image') {
                                     setPreviewImage(att.url);
                                   } else if (att.type === 'link') {
-                                    window.open(att.url, '_blank', 'noopener,noreferrer');
+                                    openExternalUrl(att.url, e);
                                   }
                                 }}
                                 className="inline-flex items-center space-x-1 px-2 py-1 rounded-md bg-slate-50 hover:bg-slate-100 text-xs text-slate-700 font-normal border border-slate-200 transition"

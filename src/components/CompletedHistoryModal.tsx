@@ -20,6 +20,7 @@ import {
 import { useWork } from '../context/WorkContext';
 import { ChainStep, TaskAttachment } from '../types';
 import { AttachmentManager } from './AttachmentManager';
+import { formatExternalUrl } from '../utils/url';
 
 interface CompletedHistoryModalProps {
   isOpen: boolean;
@@ -555,9 +556,10 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
                                 </button>
                               ) : att.type === 'link' ? (
                                 <a
-                                  href={att.url}
+                                  href={formatExternalUrl(att.url)}
                                   target="_blank"
                                   rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
                                   className="flex items-center space-x-1 font-semibold text-blue-700 hover:underline"
                                 >
                                   <ExternalLink className="w-3 h-3" />

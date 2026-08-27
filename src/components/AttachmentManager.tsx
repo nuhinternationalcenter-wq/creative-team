@@ -12,6 +12,7 @@ import {
   Upload
 } from 'lucide-react';
 import { TaskAttachment } from '../types';
+import { formatExternalUrl, openExternalUrl } from '../utils/url';
 
 interface AttachmentManagerProps {
   attachments: TaskAttachment[];
@@ -33,14 +34,11 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Add Link
-  const handleAddLink = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddLink = (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (!linkUrl.trim()) return;
 
-    let formattedUrl = linkUrl.trim();
-    if (!/^https?:\/\//i.test(formattedUrl)) {
-      formattedUrl = 'https://' + formattedUrl;
-    }
+    const formattedUrl = formatExternalUrl(linkUrl.trim());
 
     const newAttachment: TaskAttachment = {
       id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -207,9 +205,9 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
         </div>
       )}
 
-      {/* Add Link Input Panel */}
+      {/* Add Link Input Panel (Using div to avoid invalid HTML nested form submission) */}
       {!readonly && activeTab === 'link' && (
-        <form onSubmit={handleAddLink} className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2 text-xs">
+        <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2 text-xs">
           <div className="font-bold text-blue-900 flex items-center justify-between">
             <span>🔗 เพิ่มลิงก์ (Google Drive / Canva / Figma / Sheets / URL)</span>
             <button
@@ -226,6 +224,12 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
               placeholder="ชื่อลิงก์ (เช่น Lookbook รูปแบบจริง)"
               value={linkName}
               onChange={(e) => setLinkName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddLink();
+                }
+              }}
               className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:outline-hidden"
             />
             <input
@@ -234,6 +238,12 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
               placeholder="URL ลิงก์ (https://...)"
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddLink();
+                }
+              }}
               className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:outline-hidden"
             />
           </div>
@@ -246,13 +256,14 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
               ยกเลิก
             </button>
             <button
-              type="submit"
-              className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold rounded-lg shadow-xs"
+              type="button"
+              onClick={handleAddLink}
+              className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold rounded-lg shadow-xs cursor-pointer"
             >
               แนบลิงก์
             </button>
           </div>
-        </form>
+        </div>
       )}
 
       {/* Attachments List / Grid */}
@@ -317,10 +328,13 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
                 <div className="flex items-center space-x-1 shrink-0">
                   {isLink ? (
                     <a
-                      href={att.url}
+                      href={formatExternalUrl(att.url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                      className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition cursor-pointer"
                       title="เปิดลิงก์"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />

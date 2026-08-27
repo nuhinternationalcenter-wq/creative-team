@@ -25,6 +25,7 @@ import { useWork } from '../context/WorkContext';
 import { PersonalTask, PriorityLevel, TaskAttachment } from '../types';
 import { PersonalTaskHandoverModal } from './PersonalTaskHandoverModal';
 import { AttachmentManager } from './AttachmentManager';
+import { openExternalUrl } from '../utils/url';
 
 interface PersonalTasksViewProps {
   onOpenCreateTask: () => void;
@@ -332,7 +333,7 @@ export const PersonalTasksView: React.FC<PersonalTasksViewProps> = ({
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (att.type === 'link') {
-                                    window.open(att.url, '_blank', 'noopener,noreferrer');
+                                    openExternalUrl(att.url, e);
                                   }
                                 }}
                                 className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded bg-slate-100 text-[10px] text-slate-700 font-medium border border-slate-200"

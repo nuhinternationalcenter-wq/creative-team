@@ -197,21 +197,44 @@ export const getMemberColorStyle = (memberOrBg?: string | TeamMember): MemberCol
   if (lower.includes('slate') || lower.includes('334155') || lower.includes('475569') || lower.includes('gray')) return COLOR_THEMES.slate;
 
   if (bgStr.startsWith('#')) {
-    return {
-      hex: bgStr,
-      headerBg: 'bg-white',
-      headerBorder: 'border-slate-300',
-      headerText: 'text-slate-900',
-      columnBg: 'bg-slate-50/40',
-      columnBorder: 'border-slate-200',
-      cardBorderLeft: 'border-l-slate-700',
-      cardBorderHover: 'hover:border-slate-400',
-      badgeBg: 'bg-slate-100',
-      badgeText: 'text-slate-900',
-      subtleBg: 'bg-slate-50',
-      ringFocus: 'ring-blue-500',
-    };
+    const rgb = hexToRgb(bgStr);
+    if (rgb) {
+      let closestTheme = COLOR_THEMES.blue;
+      let minDistance = Infinity;
+
+      Object.values(COLOR_THEMES).forEach((theme) => {
+        const themeRgb = hexToRgb(theme.hex);
+        if (themeRgb) {
+          const dist = Math.pow(rgb.r - themeRgb.r, 2) + Math.pow(rgb.g - themeRgb.g, 2) + Math.pow(rgb.b - themeRgb.b, 2);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestTheme = theme;
+          }
+        }
+      });
+
+      return { ...closestTheme, hex: bgStr };
+    }
   }
 
   return COLOR_THEMES.blue;
 };
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const cleanHex = hex.replace('#', '').trim();
+  if (cleanHex.length === 3) {
+    return {
+      r: parseInt(cleanHex[0] + cleanHex[0], 16),
+      g: parseInt(cleanHex[1] + cleanHex[1], 16),
+      b: parseInt(cleanHex[2] + cleanHex[2], 16),
+    };
+  }
+  if (cleanHex.length === 6) {
+    return {
+      r: parseInt(cleanHex.substring(0, 2), 16),
+      g: parseInt(cleanHex.substring(2, 4), 16),
+      b: parseInt(cleanHex.substring(4, 6), 16),
+    };
+  }
+  return null;
+}
