@@ -191,6 +191,8 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return localStorage.getItem('workchain_theme_color') || 'slate';
   });
 
+  const [isFirebaseLoaded, setIsFirebaseLoaded] = useState(false);
+
   const setCustomLogo = (logo: string) => {
     setCustomLogoState(logo);
     localStorage.setItem('workchain_custom_logo', logo);
@@ -205,10 +207,15 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     import('../lib/sync').then(({ subscribeToWorkspace }) => {
       const unsubscribe = subscribeToWorkspace((data) => {
-        if (data.members) setMembers(data.members);
-        if (data.projects) setProjects(data.projects);
-        if (data.personalTasks) setPersonalTasks(data.personalTasks);
-        if (data.notifications) setNotifications(data.notifications);
+        setIsFirebaseLoaded(true);
+        if (data) {
+          if (data.members) setMembers(data.members);
+          if (data.projects) setProjects(data.projects);
+          if (data.personalTasks) setPersonalTasks(data.personalTasks);
+          if (data.notifications) setNotifications(data.notifications);
+          if (data.customLogo !== undefined) setCustomLogoState(data.customLogo);
+          if (data.themeColor !== undefined) setThemeColorState(data.themeColor);
+        }
       });
       return () => unsubscribe();
     });
@@ -216,15 +223,19 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Sync to Firestore when local state changes
   useEffect(() => {
+    if (!isFirebaseLoaded) return;
+
     import('../lib/sync').then(({ syncToFirestore }) => {
       syncToFirestore({
         members,
         projects,
         personalTasks,
-        notifications
+        notifications,
+        customLogo,
+        themeColor
       });
     });
-  }, [members, projects, personalTasks, notifications]);
+  }, [members, projects, personalTasks, notifications, customLogo, themeColor, isFirebaseLoaded]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_ROLE, selectedRole);

@@ -122,13 +122,13 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Center Navigation Tabs */}
-          <nav className="hidden md:flex items-center space-x-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200">
+          <nav className="hidden md:flex items-center space-x-2 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200">
             <button
               id="nav-tab-dashboard"
               onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition cursor-pointer ${
                 activeTab === 'dashboard'
-                  ? `bg-white shadow-2xs font-semibold ${
+                  ? `bg-white shadow-sm font-bold ${
                       themeColor === 'blue' ? 'text-blue-600' :
                       themeColor === 'emerald' ? 'text-emerald-600' :
                       themeColor === 'indigo' ? 'text-indigo-600' :
@@ -137,16 +137,16 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
-              <LayoutDashboard className="w-3.5 h-3.5" />
+              <LayoutDashboard className="w-4 h-4" />
               <span>แดชบอร์ดสรุป</span>
             </button>
 
             <button
               id="nav-tab-personal"
               onClick={() => setActiveTab('personal')}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition cursor-pointer ${
                 activeTab === 'personal'
-                  ? `bg-white shadow-2xs font-semibold ${
+                  ? `bg-white shadow-sm font-bold ${
                       themeColor === 'blue' ? 'text-blue-600' :
                       themeColor === 'emerald' ? 'text-emerald-600' :
                       themeColor === 'indigo' ? 'text-indigo-600' :
@@ -155,16 +155,16 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
-              <CheckSquare className="w-3.5 h-3.5" />
+              <CheckSquare className="w-4 h-4" />
               <span>งานส่วนตัว</span>
             </button>
 
             <button
               id="nav-tab-timeline"
               onClick={() => setActiveTab('timeline')}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition cursor-pointer ${
                 activeTab === 'timeline'
-                  ? `bg-white shadow-2xs font-semibold ${
+                  ? `bg-white shadow-sm font-bold ${
                       themeColor === 'blue' ? 'text-blue-600' :
                       themeColor === 'emerald' ? 'text-emerald-600' :
                       themeColor === 'indigo' ? 'text-indigo-600' :
@@ -173,7 +173,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
-              <Calendar className="w-3.5 h-3.5" />
+              <Calendar className="w-4 h-4" />
               <span>ไทม์ไลน์</span>
             </button>
           </nav>

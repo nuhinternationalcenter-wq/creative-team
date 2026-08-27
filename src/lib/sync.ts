@@ -20,12 +20,14 @@ export const syncToFirestore = (data: any) => {
   }, 1000);
 };
 
-export const subscribeToWorkspace = (callback: (data: any) => void) => {
+export const subscribeToWorkspace = (callback: (data: any | null) => void) => {
   return onSnapshot(
     doc(db, 'settings', WORKSPACE_DOC_ID), 
     (docSnap) => {
       if (docSnap.exists() && !docSnap.metadata.hasPendingWrites) {
         callback(docSnap.data());
+      } else if (!docSnap.exists()) {
+        callback(null);
       }
     },
     (error: any) => {
