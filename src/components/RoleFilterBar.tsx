@@ -58,7 +58,10 @@ export const RoleFilterBar: React.FC = () => {
                     : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
                 }`}
               >
-                <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white' : m.avatarBg}`} />
+                <span 
+                  className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white' : (!m.color ? m.avatarBg : '')}`} 
+                  style={!isSelected && m.color ? { backgroundColor: m.color } : undefined} 
+                />
                 <span>{m.name}</span>
                 {counts.chainCount > 0 && (
                   <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-bold ${

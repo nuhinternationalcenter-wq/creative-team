@@ -359,8 +359,8 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
               >
                 <div className="flex items-center space-x-3 min-w-0">
                   <div 
-                    className={`w-9 h-9 rounded-xl overflow-hidden ${!member.avatarUrl ? member.avatarBg : ''} text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs`}
-                    style={member.color ? { backgroundColor: member.color } : undefined}
+                    className={`w-9 h-9 rounded-xl overflow-hidden ${!member.avatarUrl && !member.color ? member.avatarBg : ''} text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs`}
+                    style={!member.avatarUrl && member.color ? { backgroundColor: member.color } : undefined}
                   >
                     {member.avatarUrl ? (
                       <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" />

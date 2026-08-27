@@ -131,7 +131,7 @@ export const PersonalTaskHandoverModal: React.FC<PersonalTaskHandoverModalProps>
                         : 'border-slate-200 hover:border-slate-300 bg-white'
                     }`}
                   >
-                    <span className={`w-3 h-3 rounded-full shrink-0 ${m.avatarBg}`} />
+                    <span className={`w-3 h-3 rounded-full shrink-0 ${!m.color ? m.avatarBg : ''}`} style={m.color ? { backgroundColor: m.color } : undefined} />
                     <div className="overflow-hidden">
                       <div className="text-xs font-bold text-slate-800 truncate">
                         {m.name} {isSelf && <span className="text-[10px] text-slate-400 font-normal">(ฉัน)</span>}

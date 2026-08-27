@@ -961,7 +961,16 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setThemeColor,
       }}
     >
-      {children}
+      {!isFirebaseLoaded ? (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="w-8 h-8 border-4 border-slate-300 border-t-slate-800 rounded-full animate-spin"></div>
+            <p className="text-slate-500 font-medium">กำลังเชื่อมต่อฐานข้อมูล...</p>
+          </div>
+        </div>
+      ) : (
+        children
+      )}
     </WorkContext.Provider>
   );
 };
