@@ -57,9 +57,12 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
 }) => {
   const { 
     members, 
+    updateMember,
     selectedRole, 
     setSelectedRole,
     updateStepStatus, 
+    reopenStep,
+    updatePersonalTask,
     deleteStep, 
     clearProjectSteps, 
     resetToDefault,
@@ -833,6 +836,27 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
 
                           <div className="flex items-center space-x-1">
                             {getStatusBadge(step.status)}
+
+                            {/* Quick restore button if completed/blocked/waiting */}
+                            {(isCompleted || isBlocked || step.status === 'waiting_approval') && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (isPersonal) {
+                                    updatePersonalTask(step.id, { status: 'in_progress' });
+                                  } else {
+                                    reopenStep(project.id, step.id);
+                                  }
+                                }}
+                                className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold rounded-md border border-blue-200 transition flex items-center space-x-1 shrink-0 cursor-pointer shadow-2xs"
+                                title="ดึงงานนี้กลับมาทำต่อในกระดาน"
+                              >
+                                <RotateCcw className="w-3 h-3 text-blue-600" />
+                                <span>ดึงกลับมาทำต่อ</span>
+                              </button>
+                            )}
+
                             {/* Quick edit button on hover */}
                             <button
                               type="button"

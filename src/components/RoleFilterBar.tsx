@@ -3,7 +3,7 @@ import { Users, Filter, X, Sparkles } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 
 export const RoleFilterBar: React.FC = () => {
-  const { members, selectedRole, setSelectedRole, activeProject, personalTasks } = useWork();
+  const { members, updateMember, selectedRole, setSelectedRole, activeProject, personalTasks } = useWork();
 
   const getMemberTaskCounts = (memberName: string) => {
     let chainCount = 0;
@@ -59,8 +59,8 @@ export const RoleFilterBar: React.FC = () => {
                 }`}
               >
                 <span 
-                  className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white' : (!m.color ? m.avatarBg : '')}`} 
-                  style={!isSelected && m.color ? { backgroundColor: m.color } : undefined} 
+                  className={`w-2.5 h-2.5 rounded-full shrink-0 ${isSelected ? 'bg-white' : ''}`} 
+                  style={!isSelected ? { backgroundColor: m.color || '#3b82f6' } : undefined} 
                 />
                 <span>{m.name}</span>
                 {counts.chainCount > 0 && (

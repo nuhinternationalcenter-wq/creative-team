@@ -16,7 +16,8 @@ import {
   Sparkles,
   ArrowRight,
   Layers,
-  Edit3
+  Edit3,
+  RotateCcw
 } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 import { ChainStep, PersonalTask, TeamChainProject } from '../types';
@@ -58,7 +59,8 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
     personalTasks, 
     selectedRole, 
     members,
-    updatePersonalTask 
+    updatePersonalTask,
+    reopenStep
   } = useWork();
 
   const [viewMode, setViewMode] = useState<'calendar' | 'timeline' | 'agenda'>('calendar');
@@ -299,6 +301,20 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
               >
                 <Send className="w-3 h-3" />
                 <span className="hidden sm:inline">ส่งต่องาน</span>
+              </button>
+            )}
+
+            {/* Reopen Team Step Button */}
+            {isChain && item.isCompleted && item.originalStep && (
+              <button
+                onClick={() =>
+                  reopenStep(item.originalProject?.id || '', item.originalStep!.id)
+                }
+                className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center space-x-1 border border-blue-200 transition cursor-pointer shadow-2xs"
+                title="ดึงงานนี้กลับมาทำต่อในกระดาน"
+              >
+                <RotateCcw className="w-3 h-3 text-blue-600" />
+                <span className="hidden sm:inline">ดึงกลับมาทำต่อ</span>
               </button>
             )}
 

@@ -32,6 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { 
     members, 
+    updateMember,
     selectedRole, 
     setSelectedRole, 
     notifications, 
@@ -185,7 +186,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Right Action Controls */}
           <div className="flex items-center space-x-2">
             {/* Active User Perspective Dropdown */}
-            <div className="relative">
+            <div className="relative flex items-center">
               <div className="flex items-center bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 transition">
                 <UserCheck className="w-3.5 h-3.5 mr-1.5 text-slate-500" />
                 <span className="text-slate-400 mr-1 hidden sm:inline">มุมมอง:</span>

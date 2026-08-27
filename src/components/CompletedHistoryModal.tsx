@@ -114,7 +114,7 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
     if (isPersonal) {
       updatePersonalTask(stepId, { status: 'in_progress' });
     } else {
-      reopenStep(activeProject.id, stepId);
+      reopenStep(activeProject?.id || '', stepId);
     }
   };
 

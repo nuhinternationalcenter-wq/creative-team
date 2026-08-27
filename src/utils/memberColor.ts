@@ -183,32 +183,33 @@ export const getMemberColorStyle = (memberOrBg?: string | TeamMember): MemberCol
     bgStr = memberOrBg.color || memberOrBg.avatarBg || '';
   }
 
-  if (bgStr.includes('rose') || bgStr.includes('f43f5e')) return COLOR_THEMES.rose;
-  if (bgStr.includes('blue') || bgStr.includes('3b82f6')) return COLOR_THEMES.blue;
-  if (bgStr.includes('amber') || bgStr.includes('f59e0b') || bgStr.includes('yellow')) return COLOR_THEMES.amber;
-  if (bgStr.includes('emerald') || bgStr.includes('10b981') || bgStr.includes('green')) return COLOR_THEMES.emerald;
-  if (bgStr.includes('indigo') || bgStr.includes('6366f1')) return COLOR_THEMES.indigo;
-  if (bgStr.includes('pink') || bgStr.includes('ec4899')) return COLOR_THEMES.pink;
-  if (bgStr.includes('cyan') || bgStr.includes('06b6d4') || bgStr.includes('sky')) return COLOR_THEMES.cyan;
-  if (bgStr.includes('violet') || bgStr.includes('8b5cf6')) return COLOR_THEMES.violet;
-  if (bgStr.includes('purple') || bgStr.includes('a855f7')) return COLOR_THEMES.purple;
-  if (bgStr.includes('teal') || bgStr.includes('14b8a6')) return COLOR_THEMES.teal;
-  if (bgStr.includes('slate') || bgStr.includes('gray') || bgStr.includes('zinc')) return COLOR_THEMES.slate;
+  const lower = bgStr.toLowerCase();
+  if (lower.includes('rose') || lower.includes('f43f5e') || lower.includes('e11d48')) return COLOR_THEMES.rose;
+  if (lower.includes('blue') || lower.includes('3b82f6') || lower.includes('2563eb')) return COLOR_THEMES.blue;
+  if (lower.includes('amber') || lower.includes('f59e0b') || lower.includes('d97706') || lower.includes('yellow')) return COLOR_THEMES.amber;
+  if (lower.includes('emerald') || lower.includes('10b981') || lower.includes('059669') || lower.includes('green')) return COLOR_THEMES.emerald;
+  if (lower.includes('indigo') || lower.includes('6366f1') || lower.includes('4f46e5')) return COLOR_THEMES.indigo;
+  if (lower.includes('pink') || lower.includes('ec4899') || lower.includes('db2777')) return COLOR_THEMES.pink;
+  if (lower.includes('cyan') || lower.includes('06b6d4') || lower.includes('0284c7') || lower.includes('sky')) return COLOR_THEMES.cyan;
+  if (lower.includes('violet') || lower.includes('8b5cf6') || lower.includes('7c3aed')) return COLOR_THEMES.violet;
+  if (lower.includes('purple') || lower.includes('a855f7') || lower.includes('9333ea')) return COLOR_THEMES.purple;
+  if (lower.includes('teal') || lower.includes('14b8a6') || lower.includes('0d9488')) return COLOR_THEMES.teal;
+  if (lower.includes('slate') || lower.includes('334155') || lower.includes('475569') || lower.includes('gray')) return COLOR_THEMES.slate;
 
   if (bgStr.startsWith('#')) {
     return {
       hex: bgStr,
-      headerBg: 'bg-slate-50/80',
-      headerBorder: 'border-slate-200',
+      headerBg: 'bg-white',
+      headerBorder: 'border-slate-300',
       headerText: 'text-slate-900',
-      columnBg: 'bg-slate-50/25',
-      columnBorder: 'border-slate-200/90',
+      columnBg: 'bg-slate-50/40',
+      columnBorder: 'border-slate-200',
       cardBorderLeft: 'border-l-slate-700',
-      cardBorderHover: 'hover:border-slate-300',
+      cardBorderHover: 'hover:border-slate-400',
       badgeBg: 'bg-slate-100',
-      badgeText: 'text-slate-800',
+      badgeText: 'text-slate-900',
       subtleBg: 'bg-slate-50',
-      ringFocus: 'ring-slate-400',
+      ringFocus: 'ring-blue-500',
     };
   }
 

@@ -292,17 +292,17 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateMember = (id: string, updates: Partial<TeamMember>) => {
     setMembers((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, ...updates } : m))
+      prev.map((m) => (m.id === id || m.name === id ? { ...m, ...updates } : m))
     );
   };
 
   const deleteMember = (id: string) => {
-    setMembers((prev) => prev.filter((m) => m.id !== id));
+    setMembers((prev) => prev.filter((m) => m.id !== id && m.name !== id));
   };
 
   const reorderMember = (id: string, direction: 'left' | 'right' | 'up' | 'down') => {
     setMembers((prev) => {
-      const index = prev.findIndex((m) => m.id === id);
+      const index = prev.findIndex((m) => m.id === id || m.name === id);
       if (index === -1) return prev;
       const targetIndex = (direction === 'left' || direction === 'up') ? index - 1 : index + 1;
       if (targetIndex < 0 || targetIndex >= prev.length) return prev;
@@ -318,7 +318,8 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const reopenStep = (projectId: string, stepId: string) => {
     setProjects((prevProjects) =>
       prevProjects.map((proj) => {
-        if (proj.id !== projectId) return proj;
+        const hasStep = proj.steps.some((s) => s.id === stepId);
+        if (proj.id !== projectId && !hasStep) return proj;
 
         const updatedSteps = proj.steps.map((step) => {
           if (step.id !== stepId) return step;
@@ -340,7 +341,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         const completedCount = updatedSteps.filter((s) => s.status === 'completed').length;
-        const progress = Math.round((completedCount / updatedSteps.length) * 100);
+        const progress = updatedSteps.length > 0 ? Math.round((completedCount / updatedSteps.length) * 100) : 0;
 
         return {
           ...proj,
@@ -377,7 +378,8 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ) => {
     setProjects((prevProjects) =>
       prevProjects.map((proj) => {
-        if (proj.id !== projectId) return proj;
+        const hasStep = proj.steps.some((s) => s.id === stepId);
+        if (proj.id !== projectId && !hasStep) return proj;
 
         const updatedSteps = proj.steps.map((step) => {
           if (step.id !== stepId) return step;
@@ -622,7 +624,8 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateStepDetails = (projectId: string, stepId: string, updates: Partial<ChainStep>) => {
     setProjects((prev) =>
       prev.map((proj) => {
-        if (proj.id !== projectId) return proj;
+        const hasStep = proj.steps.some((s) => s.id === stepId);
+        if (proj.id !== projectId && !hasStep) return proj;
         return {
           ...proj,
           steps: proj.steps.map((step) => (step.id === stepId ? { ...step, ...updates } : step)),
