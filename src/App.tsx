@@ -17,12 +17,13 @@ import { CreateProjectModal } from './components/CreateProjectModal';
 import { NotificationDrawer } from './components/NotificationDrawer';
 import { StepDetailModal } from './components/StepDetailModal';
 import { StepHandoverModal } from './components/StepHandoverModal';
-import { ChainStep } from './types';
+import { ChainStep, TeamChainProject } from './types';
 
 function MainAppContent() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'personal' | 'timeline'>('dashboard');
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
+  const [projectToEdit, setProjectToEdit] = useState<TeamChainProject | null>(null);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const [selectedStep, setSelectedStep] = useState<ChainStep | null>(null);
@@ -100,7 +101,7 @@ function MainAppContent() {
       />
 
       {/* Main Viewport */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
@@ -116,7 +117,16 @@ function MainAppContent() {
             />
 
             <div className="pt-4 border-t border-slate-200">
-              <TeamChainBoard onOpenCreateProject={() => setIsCreateProjectOpen(true)} />
+              <TeamChainBoard 
+                onOpenCreateProject={() => {
+                  setProjectToEdit(null);
+                  setIsCreateProjectOpen(true);
+                }} 
+                onOpenEditProject={() => {
+                  setProjectToEdit(activeProject);
+                  setIsCreateProjectOpen(true);
+                }}
+              />
             </div>
           </div>
         )}
@@ -144,6 +154,7 @@ function MainAppContent() {
       <CreateProjectModal
         isOpen={isCreateProjectOpen}
         onClose={() => setIsCreateProjectOpen(false)}
+        projectToEdit={projectToEdit}
       />
 
       <NotificationDrawer

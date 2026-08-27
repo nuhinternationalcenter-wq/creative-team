@@ -1,12 +1,12 @@
 {
-  "projectId": "creative-4fc55",
-  "appId": "1:803474057827:web:f0fc20cc4cbaa30e956656",
-  "apiKey": "AIzaSyAkphXpg--ZDqbKP2w3K40jLrQjPa2IMnU",
-  "authDomain": "creative-4fc55.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-workflowtracker-4bf6cc96-5241-4ea2-ae9c-1c625d15fdcf",
-  "storageBucket": "creative-4fc55.firebasestorage.app",
-  "messagingSenderId": "803474057827",
-  "measurementId": "",
-  "oAuthClientId": "803474057827-3o2qakmm3v8vstg54tank41kb2u32qvu.apps.googleusercontent.com",
+  "projectId": "creative-teame",
+  "appId": "1:394693599319:web:f609a929ccca8b10b04312",
+  "apiKey": "AIzaSyBrWvAivCYRiH5q_tPJ_yIbJBpUVoNgltw",
+  "authDomain": "creative-teame.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "creative-teame.firebasestorage.app",
+  "messagingSenderId": "394693599319",
+  "measurementId": "G-GN4ZD3Q07Z",
+  "oAuthClientId": "",
   "recaptchaSiteKey": ""
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   GitMerge, 
@@ -6,21 +6,24 @@ import {
   Calendar, 
   Layers, 
   Sparkles,
-  Info 
+  Info,
+  Edit3
 } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
-import { PriorityLevel } from '../types';
+import { PriorityLevel, TeamChainProject } from '../types';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
+  projectToEdit?: TeamChainProject | null;
 }
 
 export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   isOpen,
   onClose,
+  projectToEdit,
 }) => {
-  const { createProject, activeProject, addCustomStep, members } = useWork();
+  const { createProject, updateProject, activeProject, addCustomStep, members } = useWork();
 
   const [mode, setMode] = useState<'new_project' | 'add_step'>('new_project');
 
@@ -49,11 +52,46 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   });
   const [stepDesc, setStepDesc] = useState('');
 
+  useEffect(() => {
+    if (projectToEdit) {
+      setMode('new_project');
+      setProjectTitle(projectToEdit.title);
+      setProjectCode(projectToEdit.code);
+      setCategory(projectToEdit.category);
+      setDescription(projectToEdit.description || '');
+      setPriority(projectToEdit.priority);
+      setStartDate(projectToEdit.startDate);
+      setTargetDate(projectToEdit.targetDate);
+    } else {
+      setMode('new_project');
+      setProjectTitle('');
+      setProjectCode('');
+      setCategory('New Product Launch');
+      setDescription('');
+      setPriority('high');
+      setUseTemplate(true);
+    }
+  }, [projectToEdit, isOpen]);
+
   if (!isOpen) return null;
 
   const handleCreateProject = (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectTitle.trim()) return;
+
+    if (projectToEdit) {
+      updateProject(projectToEdit.id, {
+        title: projectTitle.trim(),
+        code: projectCode.trim(),
+        category,
+        description: description.trim(),
+        priority,
+        startDate,
+        targetDate,
+      });
+      onClose();
+      return;
+    }
 
     // If template selected, copy standard steps
     const templateSteps = useTemplate && activeProject
@@ -120,13 +158,13 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
         <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
             <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-              <GitMerge className="w-4 h-4 text-white" />
+              {projectToEdit ? <Edit3 className="w-4 h-4 text-white" /> : <GitMerge className="w-4 h-4 text-white" />}
             </div>
             <div>
               <h3 className="font-bold text-base">
-                {mode === 'new_project' ? 'สร้างโปรเจกต์ใหม่' : 'เพิ่มขั้นตอนในโปรเจกต์ปัจจุบัน'}
+                {projectToEdit ? 'แก้ไขข้อมูลโปรเจกต์' : mode === 'new_project' ? 'สร้างโปรเจกต์ใหม่' : 'เพิ่มขั้นตอนในโปรเจกต์ปัจจุบัน'}
               </h3>
-              <p className="text-xs text-slate-300">บริหารจัดการกระบวนการทำงานทีม</p>
+              <p className="text-xs text-slate-300">{projectToEdit ? 'อัปเดตรายละเอียดโปรเจกต์' : 'บริหารจัดการกระบวนการทำงานทีม'}</p>
             </div>
           </div>
           <button
@@ -138,28 +176,30 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
         </div>
 
         {/* Mode Toggle */}
-        <div className="px-6 pt-4 flex space-x-2">
-          <button
-            onClick={() => setMode('new_project')}
-            className={`flex-1 py-2 text-xs font-semibold rounded-xl border transition ${
-              mode === 'new_project'
-                ? 'bg-indigo-50 border-indigo-500 text-indigo-900'
-                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            📦 สร้างโปรเจกต์ใหม่
-          </button>
-          <button
-            onClick={() => setMode('add_step')}
-            className={`flex-1 py-2 text-xs font-semibold rounded-xl border transition ${
-              mode === 'add_step'
-                ? 'bg-indigo-50 border-indigo-500 text-indigo-900'
-                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            ➕ เพิ่มสเต็ปใหม่ในกระบวนการ
-          </button>
-        </div>
+        {!projectToEdit && (
+          <div className="px-6 pt-4 flex space-x-2">
+            <button
+              onClick={() => setMode('new_project')}
+              className={`flex-1 py-2 text-xs font-semibold rounded-xl border transition ${
+                mode === 'new_project'
+                  ? 'bg-indigo-50 border-indigo-500 text-indigo-900'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              📦 สร้างโปรเจกต์ใหม่
+            </button>
+            <button
+              onClick={() => setMode('add_step')}
+              className={`flex-1 py-2 text-xs font-semibold rounded-xl border transition ${
+                mode === 'add_step'
+                  ? 'bg-indigo-50 border-indigo-500 text-indigo-900'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              ➕ เพิ่มสเต็ปใหม่ในกระบวนการ
+            </button>
+          </div>
+        )}
 
         {/* Form Body */}
         {mode === 'new_project' ? (
@@ -232,18 +272,20 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             </div>
 
             {/* Template Toggle */}
-            <label className="flex items-center space-x-2.5 p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={useTemplate}
-                onChange={(e) => setUseTemplate(e.target.checked)}
-                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
-              />
-              <div className="text-xs">
-                <span className="font-bold text-indigo-950 block">ใช้แม่แบบกระบวนการทำงาน 20 สเต็ปมาตรฐาน</span>
-                <span className="text-indigo-700 text-[11px]">คัดลอกโครงสร้าง มีมี่ ➔ MKT ➔ NPD ➔ PO ➔ ซูรี/กะฟา ➔ เดะมี่/ฟานี ➔ น้องเซ็ง/น้องลี</span>
-              </div>
-            </label>
+            {!projectToEdit && (
+              <label className="flex items-center space-x-2.5 p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useTemplate}
+                  onChange={(e) => setUseTemplate(e.target.checked)}
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                />
+                <div className="text-xs">
+                  <span className="font-bold text-indigo-950 block">ใช้แม่แบบกระบวนการทำงาน 20 สเต็ปมาตรฐาน</span>
+                  <span className="text-indigo-700 text-[11px]">คัดลอกโครงสร้าง มีมี่ ➔ MKT ➔ NPD ➔ PO ➔ ซูรี/กะฟา ➔ เดะมี่/ฟานี ➔ น้องเซ็ง/น้องลี</span>
+                </div>
+              </label>
+            )}
 
             <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
               <button
@@ -255,9 +297,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-md transition"
+                className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-md transition flex items-center space-x-1.5"
               >
-                สร้างโปรเจกต์ใหม่
+                {projectToEdit ? <Edit3 className="w-3.5 h-3.5" /> : null}
+                <span>{projectToEdit ? 'บันทึกการแก้ไข' : 'สร้างโปรเจกต์ใหม่'}</span>
               </button>
             </div>
 

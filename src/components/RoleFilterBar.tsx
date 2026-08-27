@@ -20,7 +20,7 @@ export const RoleFilterBar: React.FC = () => {
 
   return (
     <div id="role-filter-bar" className="bg-white border-b border-slate-200 py-2.5 px-4 sm:px-6 lg:px-8 shadow-xs">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 overflow-x-auto scrollbar-thin">
+      <div className="w-full mx-auto flex items-center justify-between gap-3 overflow-x-auto scrollbar-thin">
         
         <div className="flex items-center space-x-2 text-xs font-bold text-slate-700 whitespace-nowrap">
           <span className="w-5 h-5 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center">

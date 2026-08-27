@@ -28,9 +28,10 @@ import { ChainStep } from '../types';
 
 interface TeamChainBoardProps {
   onOpenCreateProject?: () => void;
+  onOpenEditProject?: () => void;
 }
 
-export const TeamChainBoard: React.FC<TeamChainBoardProps> = ({ onOpenCreateProject }) => {
+export const TeamChainBoard: React.FC<TeamChainBoardProps> = ({ onOpenCreateProject, onOpenEditProject }) => {
   const { 
     projects, 
     activeProject, 
@@ -72,13 +73,6 @@ export const TeamChainBoard: React.FC<TeamChainBoardProps> = ({ onOpenCreateProj
   const inProgressCount = activeProject.steps.filter((s) => s.status === 'in_progress').length;
   const pendingCount = activeProject.steps.filter((s) => s.status === 'pending').length;
 
-  const handleRenameProject = () => {
-    const newName = prompt('แก้ไขชื่อโปรเจกต์:', activeProject.title);
-    if (newName && newName.trim() !== '') {
-      updateProject(activeProject.id, { title: newName.trim() });
-    }
-  };
-
   return (
     <div id="team-chain-board-section" className="space-y-6">
       
@@ -97,7 +91,7 @@ export const TeamChainBoard: React.FC<TeamChainBoardProps> = ({ onOpenCreateProj
                   onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
                   className="font-bold text-slate-900 text-base sm:text-lg bg-transparent flex items-center space-x-1 hover:text-slate-700 transition"
                 >
-                  <span>{activeProject.title} ({activeProject.code})</span>
+                  <span>{activeProject.title}</span>
                   <ChevronDown className="w-4 h-4 text-slate-400" />
                 </button>
                 
@@ -115,21 +109,23 @@ export const TeamChainBoard: React.FC<TeamChainBoardProps> = ({ onOpenCreateProj
                             activeProject.id === p.id ? 'bg-slate-200 font-bold text-slate-900' : 'text-slate-700 hover:bg-slate-100'
                           }`}
                         >
-                          {p.title} ({p.code})
+                          {p.title}
                         </button>
                       ))}
                     </div>
                     <div className="border-t border-slate-100 p-2 space-y-1 bg-slate-50">
-                      <button
-                        onClick={() => {
-                          handleRenameProject();
-                          setIsProjectDropdownOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-white hover:text-slate-900 rounded-lg flex items-center space-x-2 transition font-medium"
-                      >
-                        <Edit3 className="w-4 h-4 text-slate-500" />
-                        <span>แก้ไขชื่อโปรเจกต์ปัจจุบัน</span>
-                      </button>
+                      {onOpenEditProject && (
+                        <button
+                          onClick={() => {
+                            onOpenEditProject();
+                            setIsProjectDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-white hover:text-slate-900 rounded-lg flex items-center space-x-2 transition font-medium"
+                        >
+                          <Edit3 className="w-4 h-4 text-slate-500" />
+                          <span>แก้ไขข้อมูลโปรเจกต์ปัจจุบัน</span>
+                        </button>
+                      )}
                       {onOpenCreateProject && (
                         <button
                           onClick={() => {
