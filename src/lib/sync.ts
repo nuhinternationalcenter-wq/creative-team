@@ -11,16 +11,28 @@ export const syncToFirestore = (data: any) => {
   syncTimeout = setTimeout(async () => {
     try {
       await setDoc(doc(db, 'settings', WORKSPACE_DOC_ID), data, { merge: true });
-    } catch (e) {
+    } catch (e: any) {
       console.error("Error syncing to Firestore", e);
+      if (e.code === 'permission-denied') {
+         console.warn("Permission denied when syncing to Firestore. Check your security rules.");
+      }
     }
   }, 1000);
 };
 
 export const subscribeToWorkspace = (callback: (data: any) => void) => {
-  return onSnapshot(doc(db, 'settings', WORKSPACE_DOC_ID), (docSnap) => {
-    if (docSnap.exists() && !docSnap.metadata.hasPendingWrites) {
-      callback(docSnap.data());
+  return onSnapshot(
+    doc(db, 'settings', WORKSPACE_DOC_ID), 
+    (docSnap) => {
+      if (docSnap.exists() && !docSnap.metadata.hasPendingWrites) {
+        callback(docSnap.data());
+      }
+    },
+    (error: any) => {
+      console.error("Firestore Subscribe Error:", error);
+      if (error.code === 'permission-denied') {
+        alert("⚠️ แจ้งเตือน: ฐานข้อมูล Firebase ยังไม่อนุญาตให้เขียน/อ่านข้อมูล\n\nกรุณาไปที่ Firebase Console > Firestore Database > แท็บ Rules แล้วอัปเดตโค้ด Rules เป็น 'allow read, write: if true;' ก่อนครับ");
+      }
     }
-  });
+  );
 };

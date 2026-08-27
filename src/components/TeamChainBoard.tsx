@@ -187,7 +187,7 @@ export const TeamChainBoard: React.FC<TeamChainBoardProps> = ({ onOpenCreateProj
         </div>
 
         {/* Status Filter Chips */}
-        <div className="flex items-center space-x-1.5 overflow-x-auto text-xs">
+        <div className="flex items-center space-x-1.5 overflow-x-auto text-sm">
           <button
             onClick={() => setStatusFilter('all')}
             className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
