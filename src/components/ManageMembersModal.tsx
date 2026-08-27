@@ -303,15 +303,21 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            const res = event.target?.result as string;
-                            if (res) setAvatarUrl(res);
-                          };
-                          reader.readAsDataURL(file);
+                          try {
+                            const { uploadFileToStorage } = await import('../lib/storage');
+                            const downloadUrl = await uploadFileToStorage(file, 'avatars');
+                            setAvatarUrl(downloadUrl);
+                          } catch (error: any) {
+                            console.error(error);
+                            if (error.message === 'unauthorized' || error.code === 'storage/unauthorized') {
+                               alert('⚠️ ไม่สามารถอัปโหลดรูปโปรไฟล์ได้: กรุณาไปที่ Firebase Console > Storage และตั้งค่า Rules เป็น allow read, write: if true;');
+                            } else {
+                               alert('เกิดข้อผิดพลาดในการอัปโหลดรูปโปรไฟล์');
+                            }
+                          }
                         }
                       }}
                       className="text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"

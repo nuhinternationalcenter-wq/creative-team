@@ -180,7 +180,7 @@ export const getMemberColorStyle = (memberOrBg?: string | TeamMember): MemberCol
   if (typeof memberOrBg === 'string') {
     bgStr = memberOrBg;
   } else {
-    bgStr = memberOrBg.avatarBg || memberOrBg.color || '';
+    bgStr = memberOrBg.color || memberOrBg.avatarBg || '';
   }
 
   if (bgStr.includes('rose') || bgStr.includes('f43f5e')) return COLOR_THEMES.rose;
@@ -194,6 +194,23 @@ export const getMemberColorStyle = (memberOrBg?: string | TeamMember): MemberCol
   if (bgStr.includes('purple') || bgStr.includes('a855f7')) return COLOR_THEMES.purple;
   if (bgStr.includes('teal') || bgStr.includes('14b8a6')) return COLOR_THEMES.teal;
   if (bgStr.includes('slate') || bgStr.includes('gray') || bgStr.includes('zinc')) return COLOR_THEMES.slate;
+
+  if (bgStr.startsWith('#')) {
+    return {
+      hex: bgStr,
+      headerBg: 'bg-slate-50/80',
+      headerBorder: 'border-slate-200',
+      headerText: 'text-slate-900',
+      columnBg: 'bg-slate-50/25',
+      columnBorder: 'border-slate-200/90',
+      cardBorderLeft: 'border-l-slate-700',
+      cardBorderHover: 'hover:border-slate-300',
+      badgeBg: 'bg-slate-100',
+      badgeText: 'text-slate-800',
+      subtleBg: 'bg-slate-50',
+      ringFocus: 'ring-slate-400',
+    };
+  }
 
   return COLOR_THEMES.blue;
 };

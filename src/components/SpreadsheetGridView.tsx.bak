@@ -31,8 +31,7 @@ import {
   Maximize2,
   Minimize2,
   SlidersHorizontal,
-  Search,
-  Flame
+  Search
 } from 'lucide-react';
 import { ChainStep, TeamChainProject, StepStatus, TaskAttachment, TeamMember } from '../types';
 import { useWork } from '../context/WorkContext';
@@ -306,6 +305,7 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
   const minColWidth = getColumnMinWidth();
   const totalMinWidth = visibleMembers.length * minColWidth;
 
+  const totalMinWidth = Math.max(members.length * minColWidth, 1200);
 
   return (
     <div className="space-y-3 font-prompt">
@@ -768,8 +768,6 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                     const isWaiting = step.status === 'waiting_approval';
                     const isFromHandover = !!step.handedOverFrom;
                     const isPersonal = step.taskScope === 'personal';
-                    const todayStr = new Date().toISOString().split('T')[0];
-                    const isOverdue = !isCompleted && step.dueDate && step.dueDate < todayStr;
                     const attachments = step.attachments || [];
 
                     return (

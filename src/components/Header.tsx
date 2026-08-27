@@ -76,17 +76,21 @@ export const Header: React.FC<HeaderProps> = ({
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = (e: any) => {
+    input.onchange = async (e: any) => {
       const file = e.target?.files?.[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const result = event.target?.result as string;
-          if (result) {
-            setCustomLogo(result);
+        try {
+          const { uploadFileToStorage } = await import('../lib/storage');
+          const downloadUrl = await uploadFileToStorage(file, 'logos');
+          setCustomLogo(downloadUrl);
+        } catch (error: any) {
+          console.error(error);
+          if (error.message === 'unauthorized' || error.code === 'storage/unauthorized') {
+             alert('⚠️ ไม่สามารถอัปโหลดโลโก้ได้: กรุณาไปที่ Firebase Console > Storage และตั้งค่า Rules เป็น allow read, write: if true;');
+          } else {
+             alert('เกิดข้อผิดพลาดในการอัปโหลดโลโก้');
           }
-        };
-        reader.readAsDataURL(file);
+        }
       }
     };
     input.click();

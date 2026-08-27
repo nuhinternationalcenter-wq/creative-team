@@ -64,7 +64,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const urgentPersonal = userPersonalTasks.filter((t) => (t.priority === 'urgent' || t.priority === 'high') && t.status !== 'completed');
 
   // Overdue calculations
-  const overdueChainSteps = relevantSteps.filter((s) => s.status !== "completed" && s.dueDate < todayStr);
+  const overdueChainSteps = activeProject ? relevantSteps.filter((s) => s.status !== 'completed' activeProject.steps.filter((s) => s.status !== 'completed' && s.dueDate < todayStr)activeProject.steps.filter((s) => s.status !== 'completed' && s.dueDate < todayStr) s.dueDate < todayStr) : [];
   const overduePersonalTasks = userPersonalTasks.filter((t) => t.status !== 'completed' && t.dueDate < todayStr);
   const totalOverdue = overdueChainSteps.length + overduePersonalTasks.length;
 

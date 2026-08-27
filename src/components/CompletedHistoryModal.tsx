@@ -32,7 +32,7 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
   onClose,
   onSelectStep,
 }) => {
-  const { activeProject, reopenStep, updatePersonalTask, updateStepStatus, members } = useWork();
+  const { activeProject, personalTasks, selectedRole, reopenStep, updatePersonalTask, updateStepStatus, members } = useWork();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
@@ -43,7 +43,27 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
 
   if (!isOpen || !activeProject) return null;
 
-  const completedSteps = activeProject.steps.filter((s) => s.status === 'completed');
+  const teamCompletedSteps = activeProject.steps.filter((s) => s.status === 'completed');
+
+  const personalCompletedSteps: ChainStep[] = personalTasks
+    .filter((t) => t.status === 'completed')
+    .map((t) => ({
+      id: t.id,
+      stepNumber: 0,
+      title: t.title,
+      description: t.description || t.notes,
+      assignedRole: t.assignedTo || 'งานส่วนตัว',
+      assignedPerson: t.assignedTo || 'ส่วนตัว',
+      status: 'completed',
+      taskScope: 'personal',
+      dueDate: t.dueDate,
+      completedAt: t.updatedAt || t.dueDate,
+      handoverComment: t.notes ? `[งานส่วนตัว] ${t.notes}` : 'งานส่วนตัวเสร็จสมบูรณ์',
+      attachments: t.attachments || [],
+      dependencies: [],
+    }));
+
+  const allCompleted = [...teamCompletedSteps, ...personalCompletedSteps];
 
   // Month options derived from completedSteps or current date
   const monthsList = [
@@ -53,24 +73,35 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
     { value: '2026-06', label: 'มิถุนายน 2026 (June)' },
   ];
 
-  const filteredSteps = completedSteps.filter((s) => {
+  const filteredSteps = allCompleted.filter((s) => {
     // Month filter
     if (selectedMonth !== 'all') {
       const stepDate = s.completedAt || '';
       if (!stepDate.startsWith(selectedMonth)) return false;
     }
 
-    const matchesSearch = 
-      s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (s.description && s.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (s.handoverComment && s.handoverComment.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      s.assignedRole.toLowerCase().includes(searchTerm.toLowerCase());
+    // Search term (Task name / Description / Comment)
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase().trim();
+      const matchesTitle = s.title.toLowerCase().includes(q);
+      const matchesDesc = s.description && s.description.toLowerCase().includes(q);
+      const matchesComment = s.handoverComment && s.handoverComment.toLowerCase().includes(q);
+      const matchesPerson = s.assignedRole.toLowerCase().includes(q) || s.assignedPerson.toLowerCase().includes(q);
+      if (!matchesTitle && !matchesDesc && !matchesComment && !matchesPerson) return false;
+    }
 
-    const matchesAssignee = selectedAssignee === 'all' || 
-      s.assignedRole.includes(selectedAssignee) || 
-      s.assignedPerson.includes(selectedAssignee);
+    // Member / Assignee filter
+    if (selectedAssignee !== 'all') {
+      const target = selectedAssignee === 'my_tasks' ? selectedRole : selectedAssignee;
+      if (target !== 'all') {
+        const matchRole = s.assignedRole.includes(target) || target.includes(s.assignedRole);
+        const matchPerson = s.assignedPerson.includes(target) || target.includes(s.assignedPerson);
+        const matchName = target.includes('ลี') && (s.assignedRole.includes('แบฟีลี') || s.assignedPerson.includes('แบฟีลี'));
+        if (!matchRole && !matchPerson && !matchName) return false;
+      }
+    }
 
-    return matchesSearch && matchesAssignee;
+    return true;
   }).sort((a, b) => {
     if (a.completedAt && b.completedAt) {
       return new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime();
@@ -79,19 +110,22 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
   });
 
   const handleRestore = (stepId: string) => {
-    reopenStep(activeProject.id, stepId);
+    const isPersonal = personalTasks.some((t) => t.id === stepId);
+    if (isPersonal) {
+      updatePersonalTask(stepId, { status: 'in_progress' });
+    } else {
+      reopenStep(activeProject.id, stepId);
+    }
   };
 
   const handleUpdateAttachments = (stepId: string, newAttachments: TaskAttachment[]) => {
-    // Update step attachments in project
-    const step = activeProject.steps.find((s) => s.id === stepId);
-    if (step) {
-      if (step.taskScope === 'personal') {
-        updatePersonalTask(stepId, { attachments: newAttachments });
-      } else {
-        // Update team chain step
-        // We can update via updating status or a custom helper if available, or updateStepStatus retaining completed status
-        updateStepStatus(activeProject.id, stepId, 'completed', step.handedOverTo, step.handoverComment, newAttachments);
+    const isPersonal = personalTasks.some((t) => t.id === stepId);
+    if (isPersonal) {
+      updatePersonalTask(stepId, { attachments: newAttachments });
+    } else {
+      const step = activeProject.steps.find((s) => s.id === stepId);
+      if (step) {
+        updateStepStatus(activeProject.id, stepId, 'completed', step.handoverComment, undefined, newAttachments);
       }
     }
   };
@@ -114,7 +148,7 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
               <div className="flex items-center space-x-2">
                 <h3 className="font-bold text-base">ประวัติผลงานที่เสร็จสิ้น (Completed Archive & Report)</h3>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold">
-                  {completedSteps.length} รายการ
+                  {allCompleted.length} รายการ
                 </span>
               </div>
               <p className="text-xs text-slate-400">
@@ -142,44 +176,100 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
         </div>
 
         {/* Filters & Search Toolbar */}
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+        <div className="p-4 bg-slate-50 border-b border-slate-200 space-y-3 shrink-0">
           
-          <div className="flex items-center space-x-2 w-full sm:w-auto">
-            <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
-            <span className="text-xs text-slate-600 font-bold shrink-0">งวดประจำเดือน:</span>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-            >
-              {monthsList.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
-            <div className="bg-slate-200/80 p-1 rounded-xl flex items-center space-x-1">
-              <button
-                type="button"
-                onClick={() => setViewMode('list')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                  viewMode === 'list' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                📋 รายการงาน
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('hr_report')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center space-x-1 ${
-                  viewMode === 'hr_report' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>📊 รายงานส่ง HR</span>
-              </button>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+            {/* Search Input Box */}
+            <div className="relative w-full md:w-72">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="พิมพ์ค้นหาชื่องาน รายละเอียด หรือหมายเหตุ..."
+                className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition placeholder:text-slate-400"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+                >
+                  ✕
+                </button>
+              )}
             </div>
+
+            {/* Member / Assignee Selector & Quick My Tasks Button */}
+            <div className="flex items-center space-x-2 w-full md:w-auto flex-wrap gap-y-1">
+              {selectedRole !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedAssignee(selectedAssignee === 'my_tasks' ? 'all' : 'my_tasks')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1 cursor-pointer ${
+                    selectedAssignee === 'my_tasks' || selectedAssignee === selectedRole
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                  }`}
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>งานของฉัน ({selectedRole})</span>
+                </button>
+              )}
+
+              <div className="flex items-center space-x-1">
+                <Users className="w-4 h-4 text-slate-500 shrink-0" />
+                <select
+                  value={selectedAssignee}
+                  onChange={(e) => setSelectedAssignee(e.target.value)}
+                  className="px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none"
+                >
+                  <option value="all">พนักงานทุกคน (All Members)</option>
+                  <option value="my_tasks">👤 งานของฉัน ({selectedRole})</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.name}>{m.name} ({m.role})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Month Selector */}
+              <div className="flex items-center space-x-1">
+                <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none"
+                >
+                  {monthsList.map((m) => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* View Mode Toggle */}
+              <div className="bg-slate-200/80 p-1 rounded-xl flex items-center space-x-1 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    viewMode === 'list' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  📋 รายการงาน
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('hr_report')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center space-x-1 ${
+                    viewMode === 'hr_report' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>📊 รายงานส่ง HR</span>
+                </button>
+              </div>
+
+            </div>
+
           </div>
 
         </div>
@@ -525,7 +615,7 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
         {/* Footer */}
         <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between shrink-0">
           <span className="text-xs text-slate-500">
-            แสดง {filteredSteps.length} จากทั้งหมด {completedSteps.length} รายการที่เสร็จสิ้น
+            แสดง {filteredSteps.length} จากทั้งหมด {allCompleted.length} รายการที่เสร็จสิ้น
           </span>
           <div className="flex items-center space-x-2">
             <button

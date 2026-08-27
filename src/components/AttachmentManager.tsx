@@ -56,14 +56,35 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
     setActiveTab(null);
   };
 
-  // Handle Image Upload
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
+  const readFileAsDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const uploadFile = async (file: File, type: 'image' | 'file') => {
+    try {
+      setIsUploading(true);
+      setUploadProgress(10);
+      
+      let downloadUrl = '';
+      try {
+        const { uploadFileToStorage } = await import('../lib/storage');
+        downloadUrl = await uploadFileToStorage(file, 'attachments', (progress) => {
+          setUploadProgress(progress);
+        });
+      } catch (storageError) {
+        console.warn('Firebase storage unavailable/failed, using local Data URL fallback:', storageError);
+        setUploadProgress(50);
+        downloadUrl = await readFileAsDataUrl(file);
+      }
+      
       const sizeStr = file.size > 1024 * 1024 
         ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
         : `${Math.round(file.size / 1024)} KB`;
@@ -71,16 +92,28 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
       const newAttachment: TaskAttachment = {
         id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         name: file.name,
-        type: 'image',
-        url: result,
+        type: type,
+        url: downloadUrl,
         size: sizeStr,
         uploadedAt: new Date().toISOString(),
       };
 
       onChange([...attachments, newAttachment]);
       setActiveTab(null);
-    };
-    reader.readAsDataURL(file);
+    } catch (e: any) {
+      console.error('File read error:', e);
+      alert('เกิดข้อผิดพลาดในการแนบไฟล์: ' + (e.message || e));
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // Handle Image Upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    uploadFile(file, 'image');
     if (e.target) e.target.value = '';
   };
 
@@ -88,27 +121,7 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const sizeStr = file.size > 1024 * 1024 
-        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
-        : `${Math.round(file.size / 1024)} KB`;
-
-      const newAttachment: TaskAttachment = {
-        id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        name: file.name,
-        type: 'file',
-        url: result,
-        size: sizeStr,
-        uploadedAt: new Date().toISOString(),
-      };
-
-      onChange([...attachments, newAttachment]);
-      setActiveTab(null);
-    };
-    reader.readAsDataURL(file);
+    uploadFile(file, 'file');
     if (e.target) e.target.value = '';
   };
 
@@ -129,12 +142,13 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
           <div className="flex items-center space-x-1">
             <button
               type="button"
+              disabled={isUploading}
               onClick={() => setActiveTab(activeTab === 'link' ? null : 'link')}
               className={`px-2 py-1 rounded-lg text-[11px] font-semibold flex items-center space-x-1 border transition cursor-pointer ${
                 activeTab === 'link'
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-              }`}
+              } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <LinkIcon className="w-3 h-3" />
               <span>+ ลิงก์</span>
@@ -142,8 +156,9 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
 
             <button
               type="button"
+              disabled={isUploading}
               onClick={() => imageInputRef.current?.click()}
-              className="px-2 py-1 rounded-lg text-[11px] font-semibold flex items-center space-x-1 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition cursor-pointer"
+              className={`px-2 py-1 rounded-lg text-[11px] font-semibold flex items-center space-x-1 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <ImageIcon className="w-3 h-3 text-pink-600" />
               <span>+ รูปภาพ</span>
@@ -151,8 +166,9 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
 
             <button
               type="button"
+              disabled={isUploading}
               onClick={() => fileInputRef.current?.click()}
-              className="px-2 py-1 rounded-lg text-[11px] font-semibold flex items-center space-x-1 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition cursor-pointer"
+              className={`px-2 py-1 rounded-lg text-[11px] font-semibold flex items-center space-x-1 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Upload className="w-3 h-3 text-emerald-600" />
               <span>+ ไฟล์</span>
@@ -175,6 +191,21 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
           </div>
         )}
       </div>
+
+      {isUploading && (
+        <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl space-y-1.5 animate-pulse">
+          <div className="flex justify-between text-xs text-blue-700 font-semibold">
+            <span>กำลังอัปโหลดไฟล์ไปที่ Cloud Storage...</span>
+            <span>{uploadProgress}%</span>
+          </div>
+          <div className="w-full bg-blue-200/50 rounded-full h-1.5 overflow-hidden">
+            <div 
+              className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Add Link Input Panel */}
       {!readonly && activeTab === 'link' && (

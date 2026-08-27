@@ -41,7 +41,7 @@ interface WorkContextType {
   dismissToast: () => void;
 
   // Step operations
-  updateStepStatus: (projectId: string, stepId: string, newStatus: StepStatus, handoverComment?: string, workLogText?: string) => void;
+  updateStepStatus: (projectId: string, stepId: string, newStatus: StepStatus, handoverComment?: string, workLogText?: string, newAttachments?: any[]) => void;
   reopenStep: (projectId: string, stepId: string) => void;
   completeStepAndHandover: (
     projectId: string,
@@ -221,6 +221,43 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, []);
 
+  // Sync to local storage when state changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(members));
+  }, [members]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projects));
+  }, [projects]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(personalTasks));
+  }, [personalTasks]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_NOTIFS, JSON.stringify(notifications));
+  }, [notifications]);
+
+  // Cross-tab synchronization via storage event
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY_MEMBERS && e.newValue) {
+        try { setMembers(JSON.parse(e.newValue)); } catch {}
+      }
+      if (e.key === STORAGE_KEY_PROJECTS && e.newValue) {
+        try { setProjects(JSON.parse(e.newValue)); } catch {}
+      }
+      if (e.key === STORAGE_KEY_TASKS && e.newValue) {
+        try { setPersonalTasks(JSON.parse(e.newValue)); } catch {}
+      }
+      if (e.key === STORAGE_KEY_NOTIFS && e.newValue) {
+        try { setNotifications(JSON.parse(e.newValue)); } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // Sync to Firestore when local state changes
   useEffect(() => {
     if (!isFirebaseLoaded) return;
@@ -335,7 +372,8 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     stepId: string,
     newStatus: StepStatus,
     handoverComment?: string,
-    workLogText?: string
+    workLogText?: string,
+    newAttachments?: any[]
   ) => {
     setProjects((prevProjects) =>
       prevProjects.map((proj) => {
@@ -359,6 +397,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ...step,
             status: newStatus,
             handoverComment: handoverComment || step.handoverComment,
+            attachments: newAttachments || step.attachments,
             completedAt: newStatus === 'completed' ? (step.completedAt || new Date().toISOString()) : undefined,
             workLogs: updatedLogs,
           };
