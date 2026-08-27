@@ -1,0 +1,6 @@
+{
+  "name": "WorkFlow Tracker",
+  "description": "ระบบจัดการกระบวนการทำงานทีม (Team Workflow) และงานส่วนตัว พร้อมส่งต่องานอัตโนมัติ แดชบอร์ดสรุปภาพรวมและแจ้งเตือนตามกำหนดการ",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

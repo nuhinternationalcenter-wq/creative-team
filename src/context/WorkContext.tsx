@@ -1,0 +1,964 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import confetti from 'canvas-confetti';
+import { 
+  TeamChainProject, 
+  PersonalTask, 
+  TeamMember, 
+  NotificationItem, 
+  ChainStep, 
+  StepStatus,
+  WorkLogEntry 
+} from '../types';
+import { 
+  INITIAL_MEMBERS, 
+  INITIAL_PROJECTS, 
+  INITIAL_PERSONAL_TASKS, 
+  INITIAL_NOTIFICATIONS 
+} from '../data/initialData';
+
+export interface ToastNotification {
+  id: string;
+  message: string;
+  recipient: string;
+  taskTitle: string;
+  type: 'success' | 'info';
+}
+
+interface WorkContextType {
+  members: TeamMember[];
+  addMember: (member: Omit<TeamMember, 'id'>) => void;
+  updateMember: (id: string, updates: Partial<TeamMember>) => void;
+  deleteMember: (id: string) => void;
+  reorderMember: (id: string, direction: 'left' | 'right' | 'up' | 'down') => void;
+  projects: TeamChainProject[];
+  personalTasks: PersonalTask[];
+  notifications: NotificationItem[];
+  selectedRole: string; // 'all' or member ID/name
+  setSelectedRole: (role: string) => void;
+  activeProject: TeamChainProject | null;
+  setActiveProjectId: (id: string) => void;
+  toast: ToastNotification | null;
+  dismissToast: () => void;
+
+  // Step operations
+  updateStepStatus: (projectId: string, stepId: string, newStatus: StepStatus, handoverComment?: string, workLogText?: string) => void;
+  reopenStep: (projectId: string, stepId: string) => void;
+  completeStepAndHandover: (
+    projectId: string,
+    stepId: string,
+    handoverComment: string,
+    logDurationMinutes?: number,
+    customNextAssignee?: string,
+    newStepTitle?: string,
+    newStepDueDate?: string,
+    newAttachments?: any[]
+  ) => void;
+  addStepLog: (projectId: string, stepId: string, log: Omit<WorkLogEntry, 'id' | 'timestamp'>) => void;
+  updateStepDetails: (projectId: string, stepId: string, updates: Partial<ChainStep>) => void;
+  addCustomStep: (projectId: string, newStep: Omit<ChainStep, 'id'>) => void;
+  deleteStep: (projectId: string, stepId: string) => void;
+  clearProjectSteps: (projectId: string) => void;
+
+  // Project operations
+  createProject: (project: Omit<TeamChainProject, 'id' | 'createdAt' | 'updatedAt' | 'progress'>) => void;
+  updateProject: (id: string, updates: Partial<TeamChainProject>) => void;
+  deleteProject: (id: string) => void;
+
+  // Personal task operations
+  addPersonalTask: (task: Omit<PersonalTask, 'id' | 'createdAt'>) => void;
+  updatePersonalTask: (id: string, updates: Partial<PersonalTask>) => void;
+  deletePersonalTask: (id: string) => void;
+  toggleChecklistItem: (taskId: string, itemId: string) => void;
+  addPersonalTaskLog: (taskId: string, log: Omit<WorkLogEntry, 'id' | 'timestamp'>) => void;
+  handoverPersonalTask: (
+    taskId: string,
+    targetAssignee: string,
+    comment: string,
+    actionType: 'delegate' | 'complete_and_assign_next',
+    newDueDate?: string,
+    newTitle?: string
+  ) => void;
+
+  // Notifications
+  markNotificationAsRead: (id: string) => void;
+  markAllNotificationsAsRead: () => void;
+  clearNotifications: () => void;
+  addNotification: (notif: Omit<NotificationItem, 'id' | 'timestamp' | 'read'>) => void;
+
+  // System
+  resetToDefault: () => void;
+  exportData: () => void;
+  importData: (jsonData: string) => boolean;
+
+  // Customization
+  customLogo: string;
+  setCustomLogo: (logo: string) => void;
+  themeColor: string;
+  setThemeColor: (color: string) => void;
+}
+
+const STORAGE_KEY_MEMBERS = 'workchain_members_v2';
+const STORAGE_KEY_PROJECTS = 'workchain_projects_v2';
+const STORAGE_KEY_TASKS = 'workchain_personal_tasks_v2';
+const STORAGE_KEY_NOTIFS = 'workchain_notifications_v2';
+const STORAGE_KEY_ROLE = 'workchain_active_role_v2';
+
+const WorkContext = createContext<WorkContextType | undefined>(undefined);
+
+export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [members, setMembers] = useState<TeamMember[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_MEMBERS);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse stored members', e);
+      }
+    }
+    return INITIAL_MEMBERS;
+  });
+
+  const [selectedRole, setSelectedRole] = useState<string>(() => {
+    return localStorage.getItem(STORAGE_KEY_ROLE) || 'all';
+  });
+
+  const [projects, setProjects] = useState<TeamChainProject[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_PROJECTS);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse stored projects', e);
+      }
+    }
+    return INITIAL_PROJECTS;
+  });
+
+  const [personalTasks, setPersonalTasks] = useState<PersonalTask[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_TASKS);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse stored tasks', e);
+      }
+    }
+    return INITIAL_PERSONAL_TASKS;
+  });
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_NOTIFS);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse stored notifs', e);
+      }
+    }
+    return INITIAL_NOTIFICATIONS;
+  });
+
+  const [toast, setToast] = useState<ToastNotification | null>(null);
+
+  const dismissToast = () => {
+    setToast(null);
+  };
+
+  const showToastNotification = (recipient: string, taskTitle: string, message: string) => {
+    const newToast: ToastNotification = {
+      id: `toast-${Date.now()}`,
+      recipient,
+      taskTitle,
+      message,
+      type: 'success',
+    };
+    setToast(newToast);
+
+    // Auto dismiss after 6 seconds
+    setTimeout(() => {
+      setToast((current) => (current?.id === newToast.id ? null : current));
+    }, 6000);
+  };
+
+  const [activeProjectId, setActiveProjectId] = useState<string>(() => {
+    return projects[0]?.id || 'proj-001';
+  });
+
+  const [customLogo, setCustomLogoState] = useState<string>(() => {
+    return localStorage.getItem('workchain_custom_logo') || '';
+  });
+  const [themeColor, setThemeColorState] = useState<string>(() => {
+    return localStorage.getItem('workchain_theme_color') || 'slate';
+  });
+
+  const setCustomLogo = (logo: string) => {
+    setCustomLogoState(logo);
+    localStorage.setItem('workchain_custom_logo', logo);
+  };
+
+  const setThemeColor = (color: string) => {
+    setThemeColorState(color);
+    localStorage.setItem('workchain_theme_color', color);
+  };
+
+  // Firestore real-time sync
+  useEffect(() => {
+    import('../lib/sync').then(({ subscribeToWorkspace }) => {
+      const unsubscribe = subscribeToWorkspace((data) => {
+        if (data.members) setMembers(data.members);
+        if (data.projects) setProjects(data.projects);
+        if (data.personalTasks) setPersonalTasks(data.personalTasks);
+        if (data.notifications) setNotifications(data.notifications);
+      });
+      return () => unsubscribe();
+    });
+  }, []);
+
+  // Sync to Firestore when local state changes
+  useEffect(() => {
+    import('../lib/sync').then(({ syncToFirestore }) => {
+      syncToFirestore({
+        members,
+        projects,
+        personalTasks,
+        notifications
+      });
+    });
+  }, [members, projects, personalTasks, notifications]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_ROLE, selectedRole);
+  }, [selectedRole]);
+
+  const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0] || null;
+
+  // Member CRUD
+  const addMember = (newMemberData: Omit<TeamMember, 'id'>) => {
+    const id = `member-${Date.now()}`;
+    const newMember: TeamMember = {
+      ...newMemberData,
+      id,
+    };
+    setMembers((prev) => [...prev, newMember]);
+  };
+
+  const updateMember = (id: string, updates: Partial<TeamMember>) => {
+    setMembers((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...updates } : m))
+    );
+  };
+
+  const deleteMember = (id: string) => {
+    setMembers((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  const reorderMember = (id: string, direction: 'left' | 'right' | 'up' | 'down') => {
+    setMembers((prev) => {
+      const index = prev.findIndex((m) => m.id === id);
+      if (index === -1) return prev;
+      const targetIndex = (direction === 'left' || direction === 'up') ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+      const newMembers = [...prev];
+      const temp = newMembers[index];
+      newMembers[index] = newMembers[targetIndex];
+      newMembers[targetIndex] = temp;
+      return newMembers;
+    });
+  };
+
+  // Reopen Step (restore from completed history back to active pipeline)
+  const reopenStep = (projectId: string, stepId: string) => {
+    setProjects((prevProjects) =>
+      prevProjects.map((proj) => {
+        if (proj.id !== projectId) return proj;
+
+        const updatedSteps = proj.steps.map((step) => {
+          if (step.id !== stepId) return step;
+          const updatedLogs = [...(step.workLogs || [])];
+          updatedLogs.push({
+            id: `log-${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            author: step.assignedPerson,
+            text: 'นำงานกลับมาทำต่อจากประวัติงานที่เสร็จสิ้น',
+            type: 'status_change',
+          });
+
+          return {
+            ...step,
+            status: 'in_progress' as StepStatus,
+            completedAt: undefined,
+            workLogs: updatedLogs,
+          };
+        });
+
+        const completedCount = updatedSteps.filter((s) => s.status === 'completed').length;
+        const progress = Math.round((completedCount / updatedSteps.length) * 100);
+
+        return {
+          ...proj,
+          steps: updatedSteps,
+          progress,
+          status: 'active' as const,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+
+    showToastNotification('ทุกคน', 'ดึงงานกลับมาทำต่อ', 'นำงานกลับมายังกระดานทำงานเรียบร้อยแล้ว');
+  };
+
+  // Add Notification helper
+  const addNotification = (notif: Omit<NotificationItem, 'id' | 'timestamp' | 'read'>) => {
+    const newNotif: NotificationItem = {
+      ...notif,
+      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
+    setNotifications((prev) => [newNotif, ...prev]);
+  };
+
+  // Step Status Update
+  const updateStepStatus = (
+    projectId: string,
+    stepId: string,
+    newStatus: StepStatus,
+    handoverComment?: string,
+    workLogText?: string
+  ) => {
+    setProjects((prevProjects) =>
+      prevProjects.map((proj) => {
+        if (proj.id !== projectId) return proj;
+
+        const updatedSteps = proj.steps.map((step) => {
+          if (step.id !== stepId) return step;
+
+          const updatedLogs = [...(step.workLogs || [])];
+          if (workLogText) {
+            updatedLogs.push({
+              id: `log-${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              author: step.assignedPerson,
+              text: workLogText,
+              type: 'status_change',
+            });
+          }
+
+          return {
+            ...step,
+            status: newStatus,
+            handoverComment: handoverComment || step.handoverComment,
+            completedAt: newStatus === 'completed' ? (step.completedAt || new Date().toISOString()) : undefined,
+            workLogs: updatedLogs,
+          };
+        });
+
+        // Calculate progress percentage
+        const completedCount = updatedSteps.filter((s) => s.status === 'completed').length;
+        const progress = Math.round((completedCount / updatedSteps.length) * 100);
+
+        return {
+          ...proj,
+          steps: updatedSteps,
+          progress,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+  };
+
+  // Chain Handover with automatic dependency unlocking & dynamic step creation
+  const completeStepAndHandover = (
+    projectId: string,
+    stepId: string,
+    handoverComment: string,
+    logDurationMinutes?: number,
+    customNextAssignee?: string,
+    newStepTitle?: string,
+    newStepDueDate?: string
+  ) => {
+    try {
+      confetti({
+        particleCount: 60,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    } catch {
+      // safe fallback
+    }
+
+    setProjects((prevProjects) =>
+      prevProjects.map((proj) => {
+        if (proj.id !== projectId) return proj;
+
+        // 1. Mark target step completed
+        const targetStep = proj.steps.find((s) => s.id === stepId);
+        if (!targetStep) return proj;
+
+        const targetLogs = [...(targetStep.workLogs || [])];
+        targetLogs.push({
+          id: `log-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          author: targetStep.assignedPerson,
+          text: handoverComment || 'ส่งมอบงานในกระบวนการลูกโซ่สำเร็จ',
+          durationMinutes: logDurationMinutes,
+          type: 'handover',
+        });
+
+        // Track which steps become completed
+        const completedStepIds = new Set<string>();
+        proj.steps.forEach((s) => {
+          if (s.status === 'completed' || s.id === stepId) {
+            completedStepIds.add(s.id);
+          }
+        });
+
+        // 2. Unlock dependent steps
+        const newlyUnlockedSteps: ChainStep[] = [];
+
+        const updatedSteps = proj.steps.map((s) => {
+          if (s.id === stepId) {
+            return {
+              ...s,
+              status: 'completed' as StepStatus,
+              completedAt: new Date().toISOString(),
+              handoverComment: handoverComment || s.handoverComment,
+              handedOverTo: customNextAssignee || s.handedOverTo,
+              workLogs: targetLogs,
+            };
+          }
+
+          // Check if this step is pending and all its dependencies are now satisfied
+          if (s.status === 'pending' && s.dependencies.length > 0) {
+            const allDepsCompleted = s.dependencies.every((depId) => completedStepIds.has(depId));
+            if (allDepsCompleted) {
+              const updatedStep: ChainStep = {
+                ...s,
+                status: 'in_progress' as StepStatus,
+                startDate: s.startDate || new Date().toISOString().split('T')[0],
+                handedOverFrom: targetStep.assignedRole,
+                handoverComment: handoverComment || s.handoverComment,
+              };
+              if (customNextAssignee) {
+                updatedStep.assignedRole = customNextAssignee;
+                updatedStep.assignedPerson = customNextAssignee;
+              }
+              newlyUnlockedSteps.push(updatedStep);
+              return updatedStep;
+            }
+          }
+
+          return s;
+        });
+
+        // 2.1 If a custom recipient (e.g. แบฟีลี) was selected, and no dependent step was unlocked for them,
+        // create a new active step in their column immediately!
+        if (customNextAssignee) {
+          const hasUnlockedForRecipient = newlyUnlockedSteps.some(
+            (s) => s.assignedRole.includes(customNextAssignee) || customNextAssignee.includes(s.assignedRole)
+          );
+
+          if (!hasUnlockedForRecipient) {
+            const maxStepNum = updatedSteps.reduce((max, s) => Math.max(max, s.stepNumber), 0);
+            const createdStep: ChainStep = {
+              id: `step-${Date.now()}`,
+              stepNumber: maxStepNum + 1,
+              title: newStepTitle?.trim() || `งานส่งต่อจาก ${targetStep.assignedRole}: ${targetStep.title}`,
+              description: handoverComment,
+              assignedRole: customNextAssignee,
+              assignedPerson: customNextAssignee,
+              status: 'in_progress',
+              startDate: new Date().toISOString().split('T')[0],
+              dueDate: newStepDueDate || new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+              dependencies: [stepId],
+              branch: targetStep.branch || 'main',
+              handedOverFrom: targetStep.assignedRole,
+              handoverComment: handoverComment,
+              estimatedHours: 4,
+              workLogs: [
+                {
+                  id: `log-${Date.now()}`,
+                  timestamp: new Date().toISOString(),
+                  author: targetStep.assignedRole,
+                  text: `ส่งมอบงานให้ ${customNextAssignee}: ${handoverComment}`,
+                  type: 'handover',
+                },
+              ],
+            };
+            updatedSteps.push(createdStep);
+            newlyUnlockedSteps.push(createdStep);
+          }
+        }
+
+        // 3. Create notifications for newly unlocked step assignees
+        if (newlyUnlockedSteps.length > 0) {
+          newlyUnlockedSteps.forEach((unlockedStep) => {
+            const recipient = unlockedStep.assignedRole;
+            addNotification({
+              type: 'step_unlocked',
+              title: `🔔 งานส่งต่อถึงคุณ: สเต็ป ${unlockedStep.stepNumber}`,
+              message: `งาน "${unlockedStep.title}" ปลดล็อกแล้วหลังจาก "${targetStep.title}" เสร็จสิ้น ข้อความส่งต่อ: "${handoverComment}"`,
+              relatedProjectId: projectId,
+              relatedStepId: unlockedStep.id,
+              targetRole: recipient,
+            });
+
+            showToastNotification(
+              recipient,
+              `สเต็ป ${unlockedStep.stepNumber}: ${unlockedStep.title}`,
+              `ส่งต่องานให้คุณ ${recipient} เรียบร้อยแล้ว! งานปรากฏในช่องของ ${recipient} ทันที`
+            );
+          });
+        } else {
+          showToastNotification(
+            'ทีมงาน',
+            targetStep.title,
+            `บันทึกส่งต่องานเสร็จสิ้นเรียบร้อยแล้ว!`
+          );
+        }
+
+        // Notification for completed handover
+        addNotification({
+          type: 'handover',
+          title: `ส่งต่องานลูกโซ่: สเต็ป ${targetStep.stepNumber} สำเร็จ`,
+          message: `${targetStep.assignedPerson} ได้ส่งมอบงาน "${targetStep.title}" เรียบร้อย: "${handoverComment}"`,
+          relatedProjectId: projectId,
+          relatedStepId: stepId,
+        });
+
+        const completedCount = updatedSteps.filter((s) => s.status === 'completed').length;
+        const progress = Math.round((completedCount / updatedSteps.length) * 100);
+
+        return {
+          ...proj,
+          steps: updatedSteps,
+          progress,
+          status: progress === 100 ? 'completed' : proj.status,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+  };
+
+  const addStepLog = (
+    projectId: string,
+    stepId: string,
+    log: Omit<WorkLogEntry, 'id' | 'timestamp'>
+  ) => {
+    setProjects((prev) =>
+      prev.map((proj) => {
+        if (proj.id !== projectId) return proj;
+        return {
+          ...proj,
+          steps: proj.steps.map((step) => {
+            if (step.id !== stepId) return step;
+            return {
+              ...step,
+              workLogs: [
+                ...(step.workLogs || []),
+                {
+                  ...log,
+                  id: `log-${Date.now()}`,
+                  timestamp: new Date().toISOString(),
+                },
+              ],
+            };
+          }),
+        };
+      })
+    );
+  };
+
+  const updateStepDetails = (projectId: string, stepId: string, updates: Partial<ChainStep>) => {
+    setProjects((prev) =>
+      prev.map((proj) => {
+        if (proj.id !== projectId) return proj;
+        return {
+          ...proj,
+          steps: proj.steps.map((step) => (step.id === stepId ? { ...step, ...updates } : step)),
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+  };
+
+  const addCustomStep = (projectId: string, newStep: Omit<ChainStep, 'id'>) => {
+    setProjects((prev) =>
+      prev.map((proj) => {
+        if (proj.id !== projectId) return proj;
+        const createdStep: ChainStep = {
+          ...newStep,
+          id: `step-${Date.now()}`,
+          workLogs: newStep.workLogs || [],
+        };
+        const updatedSteps = [...proj.steps, createdStep].sort((a, b) => a.stepNumber - b.stepNumber);
+        return {
+          ...proj,
+          steps: updatedSteps,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+  };
+
+  const deleteStep = (projectId: string, stepId: string) => {
+    setProjects((prev) =>
+      prev.map((proj) => {
+        if (proj.id !== projectId) return proj;
+        const updatedSteps = proj.steps.filter((s) => s.id !== stepId);
+        const completedCount = updatedSteps.filter((s) => s.status === 'completed').length;
+        const progress = updatedSteps.length > 0 ? Math.round((completedCount / updatedSteps.length) * 100) : 0;
+        return {
+          ...proj,
+          steps: updatedSteps,
+          progress,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+  };
+
+  const clearProjectSteps = (projectId: string) => {
+    setProjects((prev) =>
+      prev.map((proj) => {
+        if (proj.id !== projectId) return proj;
+        return {
+          ...proj,
+          steps: [],
+          progress: 0,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+  };
+
+  // Project CRUD
+  const createProject = (projectData: Omit<TeamChainProject, 'id' | 'createdAt' | 'updatedAt' | 'progress'>) => {
+    const newProj: TeamChainProject = {
+      ...projectData,
+      id: `proj-${Date.now()}`,
+      progress: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setProjects((prev) => [newProj, ...prev]);
+    setActiveProjectId(newProj.id);
+  };
+
+  const updateProject = (id: string, updates: Partial<TeamChainProject>) => {
+    setProjects((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p))
+    );
+  };
+
+  const deleteProject = (id: string) => {
+    setProjects((prev) => prev.filter((p) => p.id !== id));
+    if (activeProjectId === id) {
+      const remaining = projects.filter((p) => p.id !== id);
+      if (remaining.length > 0) setActiveProjectId(remaining[0].id);
+    }
+  };
+
+  // Personal Tasks CRUD
+  const addPersonalTask = (taskData: Omit<PersonalTask, 'id' | 'createdAt'>) => {
+    const newTask: PersonalTask = {
+      ...taskData,
+      id: `pt-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      checklist: taskData.checklist || [],
+      tags: taskData.tags || [],
+    };
+    setPersonalTasks((prev) => [newTask, ...prev]);
+  };
+
+  const updatePersonalTask = (id: string, updates: Partial<PersonalTask>) => {
+    setPersonalTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== id) return t;
+        const updated = { ...t, ...updates };
+        if (updates.status === 'completed' && t.status !== 'completed') {
+          updated.completedAt = new Date().toISOString();
+        }
+        return updated;
+      })
+    );
+  };
+
+  const deletePersonalTask = (id: string) => {
+    setPersonalTasks((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const toggleChecklistItem = (taskId: string, itemId: string) => {
+    setPersonalTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== taskId) return t;
+        return {
+          ...t,
+          checklist: t.checklist.map((item) =>
+            item.id === itemId ? { ...item, done: !item.done } : item
+          ),
+        };
+      })
+    );
+  };
+
+  const addPersonalTaskLog = (taskId: string, log: Omit<WorkLogEntry, 'id' | 'timestamp'>) => {
+    setPersonalTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== taskId) return t;
+        const newLog: WorkLogEntry = {
+          ...log,
+          id: `log-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+        };
+        const currentSpent = t.spentMinutes || 0;
+        const addedMinutes = log.durationMinutes || 0;
+        return {
+          ...t,
+          spentMinutes: currentSpent + addedMinutes,
+          workLogs: [...(t.workLogs || []), newLog],
+        };
+      })
+    );
+  };
+
+  // Handover Personal Task to another team member
+  const handoverPersonalTask = (
+    taskId: string,
+    targetAssignee: string,
+    comment: string,
+    actionType: 'delegate' | 'complete_and_assign_next',
+    newDueDate?: string,
+    newTitle?: string
+  ) => {
+    try {
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.6 },
+      });
+    } catch {
+      // safe fallback
+    }
+
+    const currentTask = personalTasks.find((t) => t.id === taskId);
+    if (!currentTask) return;
+
+    const author = currentTask.assignedTo;
+    const nowIso = new Date().toISOString();
+
+    if (actionType === 'complete_and_assign_next') {
+      // Mark current task completed
+      setPersonalTasks((prev) => {
+        const updatedOriginal = prev.map((t) => {
+          if (t.id !== taskId) return t;
+          return {
+            ...t,
+            status: 'completed' as const,
+            completedAt: nowIso,
+            handedOverTo: targetAssignee,
+            handoverComment: comment,
+            handoverDate: nowIso,
+            workLogs: [
+              ...(t.workLogs || []),
+              {
+                id: `log-${Date.now()}`,
+                timestamp: nowIso,
+                author,
+                text: `ส่งต่องานให้คุณ ${targetAssignee}: "${comment}"`,
+                type: 'handover' as const,
+              },
+            ],
+          };
+        });
+
+        // Create new follow-up task for recipient
+        const nextTask: PersonalTask = {
+          id: `pt-${Date.now()}`,
+          title: newTitle?.trim() || `${currentTask.title} (ส่งต่อจาก ${author})`,
+          description: `งานส่งต่อจากคุณ ${author}\n\nข้อความส่งมอบ:\n${comment}`,
+          category: currentTask.category,
+          priority: currentTask.priority,
+          status: 'todo',
+          assignedTo: targetAssignee,
+          dueDate: newDueDate || currentTask.dueDate,
+          checklist: [],
+          tags: [...currentTask.tags, 'งานส่งต่อ'],
+          createdAt: nowIso,
+          handedOverFrom: author,
+          handoverComment: comment,
+          handoverDate: nowIso,
+          workLogs: [
+            {
+              id: `log-${Date.now() + 1}`,
+              timestamp: nowIso,
+              author: 'ระบบ',
+              text: `ได้รับงานส่งต่อจากคุณ ${author}`,
+              type: 'handover' as const,
+            },
+          ],
+        };
+
+        return [nextTask, ...updatedOriginal];
+      });
+    } else {
+      // Delegate directly
+      setPersonalTasks((prev) =>
+        prev.map((t) => {
+          if (t.id !== taskId) return t;
+          return {
+            ...t,
+            assignedTo: targetAssignee,
+            handedOverFrom: author,
+            handoverComment: comment,
+            handoverDate: nowIso,
+            dueDate: newDueDate || t.dueDate,
+            workLogs: [
+              ...(t.workLogs || []),
+              {
+                id: `log-${Date.now()}`,
+                timestamp: nowIso,
+                author,
+                text: `ส่งมอบความรับผิดชอบให้คุณ ${targetAssignee}: "${comment}"`,
+                type: 'handover' as const,
+              },
+            ],
+          };
+        })
+      );
+    }
+
+    // Add targeted notification for recipient
+    addNotification({
+      type: 'handover',
+      title: `🔔 คุณได้รับงานส่งต่อใหม่จาก ${author}`,
+      message: `งาน "${currentTask.title}" ถูกส่งต่อให้คุณรับผิดชอบ ข้อความ: "${comment}"`,
+      relatedTaskId: taskId,
+      targetRole: targetAssignee,
+    });
+
+    // Show top toast banner
+    showToastNotification(
+      targetAssignee,
+      currentTask.title,
+      `ส่งต่องานให้คุณ ${targetAssignee} เรียบร้อยแล้ว พร้อมส่งการแจ้งเตือนทันที!`
+    );
+  };
+
+  // Notifications Handlers
+  const markNotificationAsRead = (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  };
+
+  const markAllNotificationsAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
+  };
+
+  // Reset & Export
+  const resetToDefault = () => {
+    setMembers(INITIAL_MEMBERS);
+    setProjects(INITIAL_PROJECTS);
+    setPersonalTasks(INITIAL_PERSONAL_TASKS);
+    setNotifications(INITIAL_NOTIFICATIONS);
+    setSelectedRole('all');
+    localStorage.removeItem(STORAGE_KEY_MEMBERS);
+    localStorage.removeItem(STORAGE_KEY_PROJECTS);
+    localStorage.removeItem(STORAGE_KEY_TASKS);
+    localStorage.removeItem(STORAGE_KEY_NOTIFS);
+    localStorage.removeItem(STORAGE_KEY_ROLE);
+  };
+
+  const exportData = () => {
+    const data = {
+      members,
+      projects,
+      personalTasks,
+      notifications,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `workchain-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importData = (jsonData: string): boolean => {
+    try {
+      const parsed = JSON.parse(jsonData);
+      if (parsed.members) setMembers(parsed.members);
+      if (parsed.projects) setProjects(parsed.projects);
+      if (parsed.personalTasks) setPersonalTasks(parsed.personalTasks);
+      if (parsed.notifications) setNotifications(parsed.notifications);
+      return true;
+    } catch (e) {
+      console.error('Import failed', e);
+      return false;
+    }
+  };
+
+  return (
+    <WorkContext.Provider
+      value={{
+        members,
+        addMember,
+        updateMember,
+        deleteMember,
+        reorderMember,
+        projects,
+        personalTasks,
+        notifications,
+        selectedRole,
+        setSelectedRole,
+        activeProject,
+        setActiveProjectId,
+        toast,
+        dismissToast,
+        updateStepStatus,
+        reopenStep,
+        completeStepAndHandover,
+        addStepLog,
+        updateStepDetails,
+        addCustomStep,
+        deleteStep,
+        clearProjectSteps,
+        createProject,
+        updateProject,
+        deleteProject,
+        addPersonalTask,
+        updatePersonalTask,
+        deletePersonalTask,
+        toggleChecklistItem,
+        addPersonalTaskLog,
+        handoverPersonalTask,
+        markNotificationAsRead,
+        markAllNotificationsAsRead,
+        clearNotifications,
+        addNotification,
+        resetToDefault,
+        exportData,
+        importData,
+        customLogo,
+        setCustomLogo,
+        themeColor,
+        setThemeColor,
+      }}
+    >
+      {children}
+    </WorkContext.Provider>
+  );
+};
+
+export const useWork = () => {
+  const context = useContext(WorkContext);
+  if (!context) {
+    throw new Error('useWork must be used within a WorkProvider');
+  }
+  return context;
+};
