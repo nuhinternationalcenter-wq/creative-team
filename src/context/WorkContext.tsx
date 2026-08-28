@@ -334,23 +334,43 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Sync to local storage when state changes
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(members));
+    try {
+      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(members));
+    } catch (e) {
+      console.warn('localStorage quota exceeded for members', e);
+    }
   }, [members]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projects));
+    try {
+      localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projects));
+    } catch (e) {
+      console.warn('localStorage quota exceeded for projects', e);
+    }
   }, [projects]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(personalTasks));
+    try {
+      localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(personalTasks));
+    } catch (e) {
+      console.warn('localStorage quota exceeded for personalTasks', e);
+    }
   }, [personalTasks]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_NOTIFS, JSON.stringify(notifications));
+    try {
+      localStorage.setItem(STORAGE_KEY_NOTIFS, JSON.stringify(notifications));
+    } catch (e) {
+      console.warn('localStorage quota exceeded for notifications', e);
+    }
   }, [notifications]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_DOCUMENTS, JSON.stringify(documents));
+    try {
+      localStorage.setItem(STORAGE_KEY_DOCUMENTS, JSON.stringify(documents));
+    } catch (e) {
+      console.warn('localStorage quota exceeded for documents', e);
+    }
   }, [documents]);
 
   // Cross-tab synchronization via storage event

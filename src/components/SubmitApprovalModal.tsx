@@ -132,12 +132,12 @@ export const SubmitApprovalModal: React.FC<SubmitApprovalModalProps> = ({
           {/* Target Task Summary Card */}
           <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              {target.type === 'step' ? '📌 งานในกระบวนการผลิต (Team Step)' : '📝 งานส่วนตัว (Personal Task)'}
+              {effectiveTarget.type === 'step' ? '📌 งานในกระบวนการผลิต (Team Step)' : '📝 งานส่วนตัว (Personal Task)'}
             </span>
             <h4 className="text-sm font-bold text-slate-900 leading-snug">{title}</h4>
             <div className="flex items-center space-x-3 text-xs text-slate-600 pt-1">
               <span>ผู้ส่งเรื่อง: <strong className="text-slate-800">{currentSubmitter}</strong></span>
-              <span>กำหนดส่ง: <strong className="text-slate-800">{target.item.dueDate}</strong></span>
+              <span>กำหนดส่ง: <strong className="text-slate-800">{effectiveTarget.item.dueDate}</strong></span>
             </div>
           </div>
 

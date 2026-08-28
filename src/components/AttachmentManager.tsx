@@ -66,6 +66,45 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
     });
   };
 
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1200;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(event.target?.result as string);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.onerror = () => resolve(event.target?.result as string);
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+  };
+
   const uploadFile = async (file: File, type: 'image' | 'file') => {
     try {
       setIsUploading(true);
@@ -80,7 +119,11 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
       } catch (storageError) {
         console.warn('Firebase storage unavailable/failed, using local Data URL fallback:', storageError);
         setUploadProgress(50);
-        downloadUrl = await readFileAsDataUrl(file);
+        if (type === 'image') {
+          downloadUrl = await compressImage(file);
+        } else {
+          downloadUrl = await readFileAsDataUrl(file);
+        }
       }
       
       const sizeStr = file.size > 1024 * 1024 
