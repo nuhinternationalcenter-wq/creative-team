@@ -7,14 +7,17 @@ import {
   NotificationItem, 
   ChainStep, 
   StepStatus,
-  WorkLogEntry 
+  WorkLogEntry,
+  WorkDocument
 } from '../types';
 import { 
   INITIAL_MEMBERS, 
   INITIAL_PROJECTS, 
   INITIAL_PERSONAL_TASKS, 
-  INITIAL_NOTIFICATIONS 
+  INITIAL_NOTIFICATIONS,
+  INITIAL_DOCUMENTS
 } from '../data/initialData';
+import { isSameMember, isLeeAlias, migrateAllDataToMrLee, normalizeMemberName } from '../utils/memberMatch';
 
 export interface ToastNotification {
   id: string;
@@ -85,6 +88,12 @@ interface WorkContextType {
   clearNotifications: () => void;
   addNotification: (notif: Omit<NotificationItem, 'id' | 'timestamp' | 'read'>) => void;
 
+  // Documents
+  documents: WorkDocument[];
+  addDocument: (doc: Omit<WorkDocument, 'id' | 'createdAt' | 'updatedAt'>) => string;
+  updateDocument: (id: string, updates: Partial<WorkDocument>) => void;
+  deleteDocument: (id: string) => void;
+
   // System
   resetToDefault: () => void;
   exportData: () => void;
@@ -101,6 +110,7 @@ const STORAGE_KEY_MEMBERS = 'workchain_members_v2';
 const STORAGE_KEY_PROJECTS = 'workchain_projects_v2';
 const STORAGE_KEY_TASKS = 'workchain_personal_tasks_v2';
 const STORAGE_KEY_NOTIFS = 'workchain_notifications_v2';
+const STORAGE_KEY_DOCUMENTS = 'workchain_documents_v2';
 const STORAGE_KEY_ROLE = 'workchain_active_role_v2';
 
 const WorkContext = createContext<WorkContextType | undefined>(undefined);
@@ -108,54 +118,80 @@ const WorkContext = createContext<WorkContextType | undefined>(undefined);
 export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [members, setMembers] = useState<TeamMember[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_MEMBERS);
+    let loaded = INITIAL_MEMBERS;
     if (saved) {
       try {
-        return JSON.parse(saved);
+        loaded = JSON.parse(saved);
       } catch (e) {
         console.error('Failed to parse stored members', e);
       }
     }
-    return INITIAL_MEMBERS;
+    const migrated = migrateAllDataToMrLee({ members: loaded });
+    return migrated.members || loaded;
   });
 
   const [selectedRole, setSelectedRole] = useState<string>(() => {
-    return localStorage.getItem(STORAGE_KEY_ROLE) || 'all';
+    const savedRole = localStorage.getItem(STORAGE_KEY_ROLE) || 'all';
+    if (isLeeAlias(savedRole)) {
+      return 'Mr Lee';
+    }
+    return savedRole;
   });
 
   const [projects, setProjects] = useState<TeamChainProject[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_PROJECTS);
+    let loaded = INITIAL_PROJECTS;
     if (saved) {
       try {
-        return JSON.parse(saved);
+        loaded = JSON.parse(saved);
       } catch (e) {
         console.error('Failed to parse stored projects', e);
       }
     }
-    return INITIAL_PROJECTS;
+    const migrated = migrateAllDataToMrLee({ projects: loaded });
+    return migrated.projects || loaded;
   });
 
   const [personalTasks, setPersonalTasks] = useState<PersonalTask[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_TASKS);
+    let loaded = INITIAL_PERSONAL_TASKS;
     if (saved) {
       try {
-        return JSON.parse(saved);
+        loaded = JSON.parse(saved);
       } catch (e) {
         console.error('Failed to parse stored tasks', e);
       }
     }
-    return INITIAL_PERSONAL_TASKS;
+    const migrated = migrateAllDataToMrLee({ personalTasks: loaded });
+    return migrated.personalTasks || loaded;
+  });
+
+  const [documents, setDocuments] = useState<WorkDocument[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_DOCUMENTS);
+    let loaded = INITIAL_DOCUMENTS;
+    if (saved) {
+      try {
+        loaded = JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse stored documents', e);
+      }
+    }
+    const migrated = migrateAllDataToMrLee({ documents: loaded });
+    return migrated.documents || loaded;
   });
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_NOTIFS);
+    let loaded = INITIAL_NOTIFICATIONS;
     if (saved) {
       try {
-        return JSON.parse(saved);
+        loaded = JSON.parse(saved);
       } catch (e) {
         console.error('Failed to parse stored notifs', e);
       }
     }
-    return INITIAL_NOTIFICATIONS;
+    const migrated = migrateAllDataToMrLee({ notifications: loaded });
+    return migrated.notifications || loaded;
   });
 
   const [toast, setToast] = useState<ToastNotification | null>(null);
@@ -212,10 +248,19 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsFirebaseLoaded(true);
         if (data) {
           isRemoteUpdateRef.current = true;
-          if (data.members) setMembers(data.members);
-          if (data.projects) setProjects(data.projects);
-          if (data.personalTasks) setPersonalTasks(data.personalTasks);
-          if (data.notifications) setNotifications(data.notifications);
+          const migrated = migrateAllDataToMrLee({
+            members: data.members,
+            projects: data.projects,
+            personalTasks: data.personalTasks,
+            notifications: data.notifications,
+            documents: data.documents,
+          });
+
+          if (migrated.members) setMembers(migrated.members);
+          if (migrated.projects) setProjects(migrated.projects);
+          if (migrated.personalTasks) setPersonalTasks(migrated.personalTasks);
+          if (migrated.notifications) setNotifications(migrated.notifications);
+          if (migrated.documents) setDocuments(migrated.documents);
           if (data.customLogo !== undefined) setCustomLogoState(data.customLogo);
           if (data.themeColor !== undefined) setThemeColorState(data.themeColor);
           setTimeout(() => {
@@ -225,6 +270,27 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       return () => unsubscribe();
     });
+  }, []);
+
+  // Force-migration check on mount to ensure existing local data with legacy names is converted
+  useEffect(() => {
+    const migrated = migrateAllDataToMrLee({
+      members,
+      projects,
+      personalTasks,
+      documents,
+      notifications,
+    });
+
+    if (migrated.members) setMembers(migrated.members);
+    if (migrated.projects) setProjects(migrated.projects);
+    if (migrated.personalTasks) setPersonalTasks(migrated.personalTasks);
+    if (migrated.documents) setDocuments(migrated.documents);
+    if (migrated.notifications) setNotifications(migrated.notifications);
+
+    if (isLeeAlias(selectedRole) && selectedRole !== 'Mr Lee') {
+      setSelectedRole('Mr Lee');
+    }
   }, []);
 
   // Sync to local storage when state changes
@@ -244,6 +310,10 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(STORAGE_KEY_NOTIFS, JSON.stringify(notifications));
   }, [notifications]);
 
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_DOCUMENTS, JSON.stringify(documents));
+  }, [documents]);
+
   // Cross-tab synchronization via storage event
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -258,6 +328,9 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       if (e.key === STORAGE_KEY_NOTIFS && e.newValue) {
         try { setNotifications(JSON.parse(e.newValue)); } catch {}
+      }
+      if (e.key === STORAGE_KEY_DOCUMENTS && e.newValue) {
+        try { setDocuments(JSON.parse(e.newValue)); } catch {}
       }
     };
     window.addEventListener('storage', handleStorageChange);
@@ -274,11 +347,12 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         projects,
         personalTasks,
         notifications,
+        documents,
         customLogo,
         themeColor
       });
     });
-  }, [members, projects, personalTasks, notifications, customLogo, themeColor, isFirebaseLoaded]);
+  }, [members, projects, personalTasks, notifications, documents, customLogo, themeColor, isFirebaseLoaded]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_ROLE, selectedRole);
@@ -297,7 +371,87 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateMember = (id: string, updates: Partial<TeamMember>) => {
-    setMembers((prev) => prev.map((m) => (m.id === id || m.name === id ? { ...m, ...updates } : m)));
+    setMembers((prev) => {
+      const targetMember = prev.find((m) => m.id === id || m.name === id);
+      if (!targetMember) return prev;
+
+      const oldName = targetMember.name;
+      const newName = updates.name;
+
+      if (newName && oldName !== newName) {
+        const memberId = targetMember.id;
+        // 1. Cascade to projects & steps & logs
+        setProjects((prevProjects) =>
+          prevProjects.map((proj) => ({
+            ...proj,
+            steps: proj.steps.map((step) => {
+              const updatedStep = { ...step };
+              let stepChanged = false;
+
+              if (step.assignedPerson === oldName || isSameMember(step.assignedPerson, oldName, memberId)) {
+                updatedStep.assignedPerson = newName;
+                stepChanged = true;
+              }
+              if (step.assignedRole === oldName || isSameMember(step.assignedRole, oldName, memberId)) {
+                updatedStep.assignedRole = newName;
+                stepChanged = true;
+              }
+
+              if (step.workLogs && step.workLogs.length > 0) {
+                const logsChanged = step.workLogs.some((log) => log.author === oldName || isSameMember(log.author, oldName, memberId));
+                if (logsChanged) {
+                  updatedStep.workLogs = step.workLogs.map((log) =>
+                    (log.author === oldName || isSameMember(log.author, oldName, memberId)) ? { ...log, author: newName } : log
+                  );
+                  stepChanged = true;
+                }
+              }
+
+              return stepChanged ? updatedStep : step;
+            }),
+          }))
+        );
+
+        // 2. Cascade to personalTasks & logs
+        setPersonalTasks((prevTasks) =>
+          prevTasks.map((task) => {
+            let taskChanged = false;
+            const updatedTask = { ...task };
+
+            if (task.assignedTo === oldName || isSameMember(task.assignedTo, oldName, memberId)) {
+              updatedTask.assignedTo = newName;
+              taskChanged = true;
+            }
+
+            if (task.workLogs && task.workLogs.length > 0) {
+              const logsChanged = task.workLogs.some((log) => log.author === oldName || isSameMember(log.author, oldName, memberId));
+              if (logsChanged) {
+                updatedTask.workLogs = task.workLogs.map((log) =>
+                  (log.author === oldName || isSameMember(log.author, oldName, memberId)) ? { ...log, author: newName } : log
+                );
+                taskChanged = true;
+              }
+            }
+
+            return taskChanged ? updatedTask : task;
+          })
+        );
+
+        // 3. Cascade to documents
+        setDocuments((prevDocs) =>
+          prevDocs.map((doc) =>
+            (doc.createdBy === oldName || isSameMember(doc.createdBy, oldName, memberId)) ? { ...doc, createdBy: newName } : doc
+          )
+        );
+
+        // 4. Update active filter if it matched the old name
+        if (selectedRole === oldName || isSameMember(selectedRole, oldName, memberId)) {
+          setSelectedRole(newName);
+        }
+      }
+
+      return prev.map((m) => (m.id === id || m.name === id ? { ...m, ...updates } : m));
+    });
   };
 
   const deleteMember = (id: string) => {
@@ -907,6 +1061,30 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
   };
 
+  // Documents Handlers
+  const addDocument = (newDocData: Omit<WorkDocument, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const id = `doc-${Date.now()}`;
+    const now = new Date().toISOString();
+    const newDoc: WorkDocument = {
+      ...newDocData,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+    setDocuments((prev) => [newDoc, ...prev]);
+    return id;
+  };
+
+  const updateDocument = (id: string, updates: Partial<WorkDocument>) => {
+    setDocuments((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, ...updates, updatedAt: new Date().toISOString() } : d))
+    );
+  };
+
+  const deleteDocument = (id: string) => {
+    setDocuments((prev) => prev.filter((d) => d.id !== id));
+  };
+
   const markAllNotificationsAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
@@ -921,11 +1099,13 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProjects(INITIAL_PROJECTS);
     setPersonalTasks(INITIAL_PERSONAL_TASKS);
     setNotifications(INITIAL_NOTIFICATIONS);
+    setDocuments(INITIAL_DOCUMENTS);
     setSelectedRole('all');
     localStorage.removeItem(STORAGE_KEY_MEMBERS);
     localStorage.removeItem(STORAGE_KEY_PROJECTS);
     localStorage.removeItem(STORAGE_KEY_TASKS);
     localStorage.removeItem(STORAGE_KEY_NOTIFS);
+    localStorage.removeItem(STORAGE_KEY_DOCUMENTS);
     localStorage.removeItem(STORAGE_KEY_ROLE);
   };
 
@@ -935,6 +1115,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       projects,
       personalTasks,
       notifications,
+      documents,
       exportedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -953,6 +1134,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (parsed.projects) setProjects(parsed.projects);
       if (parsed.personalTasks) setPersonalTasks(parsed.personalTasks);
       if (parsed.notifications) setNotifications(parsed.notifications);
+      if (parsed.documents) setDocuments(parsed.documents);
       return true;
     } catch (e) {
       console.error('Import failed', e);
@@ -971,6 +1153,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         projects,
         personalTasks,
         notifications,
+        documents,
         selectedRole,
         setSelectedRole,
         activeProject,
@@ -998,6 +1181,9 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         markAllNotificationsAsRead,
         clearNotifications,
         addNotification,
+        addDocument,
+        updateDocument,
+        deleteDocument,
         resetToDefault,
         exportData,
         importData,

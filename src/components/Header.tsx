@@ -11,13 +11,14 @@ import {
   Layers,
   Calendar,
   LayoutDashboard,
-  CheckSquare
+  CheckSquare,
+  FileText
 } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 
 interface HeaderProps {
-  activeTab: 'dashboard' | 'personal' | 'timeline';
-  setActiveTab: (tab: 'dashboard' | 'personal' | 'timeline') => void;
+  activeTab: 'dashboard' | 'personal' | 'timeline' | 'documents' | 'team_chain';
+  setActiveTab: (tab: 'dashboard' | 'personal' | 'timeline' | 'documents' | 'team_chain') => void;
   onOpenCreateTask: () => void;
   onOpenCreateProject: () => void;
   onOpenNotifications: () => void;
@@ -180,6 +181,24 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Calendar className="w-4 h-4" />
               <span>ไทม์ไลน์</span>
+            </button>
+
+            <button
+              id="nav-tab-documents"
+              onClick={() => setActiveTab('documents')}
+              className={`flex items-center space-x-2 px-5 py-2 rounded-lg text-sm font-medium transition cursor-pointer ${
+                activeTab === 'documents'
+                  ? `bg-white shadow-sm border border-slate-200/60 font-bold ${
+                      themeColor === 'blue' ? 'text-blue-600' :
+                      themeColor === 'emerald' ? 'text-emerald-600' :
+                      themeColor === 'indigo' ? 'text-indigo-600' :
+                      themeColor === 'rose' ? 'text-rose-600' : 'text-black'
+                    }`
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-300/50'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span>ข้อมูลงาน</span>
             </button>
           </nav>
 
@@ -388,6 +407,14 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             📅 ปฏิทิน
+          </button>
+          <button
+            onClick={() => setActiveTab('documents')}
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium cursor-pointer ${
+              activeTab === 'documents' ? 'bg-slate-900 text-white font-semibold' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            📄 ข้อมูลงาน
           </button>
         </div>
       </div>

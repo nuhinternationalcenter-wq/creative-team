@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 import { ChainStep, PersonalTask } from '../types';
+import { isSameMember, isLeeAlias } from '../utils/memberMatch';
 
 interface DashboardOverviewProps {
   onNavigateToTeamChain: () => void;
@@ -43,9 +44,21 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
   const todayStr = new Date().toISOString().split('T')[0];
 
+  const selectedMemberObj = members.find((m) => m.name === selectedRole || m.id === selectedRole);
+  const memberId = selectedMemberObj ? selectedMemberObj.id : (isLeeAlias(selectedRole) ? 'lee' : '');
+
   const filterStepsByRole = (steps: ChainStep[]) => {
     if (selectedRole === "all") return steps;
-    return steps.filter(s => s.assignedRole.includes(selectedRole) || s.assignedPerson.includes(selectedRole));
+    return steps.filter(
+      (s) =>
+        s.assignedRole === selectedRole ||
+        s.assignedPerson === selectedRole ||
+        s.assignedRole.includes(selectedRole) ||
+        s.assignedPerson.includes(selectedRole) ||
+        (isLeeAlias(selectedRole) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson))) ||
+        isSameMember(s.assignedRole, selectedRole, memberId) ||
+        isSameMember(s.assignedPerson, selectedRole, memberId)
+    );
   };
   
   const relevantSteps = activeProject ? filterStepsByRole(activeProject.steps) : [];
@@ -55,9 +68,16 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const waitingChainSteps = relevantSteps.filter((s) => s.status === "waiting_approval");
   const projectProgress = totalChainSteps > 0 ? Math.round((completedChainSteps / totalChainSteps) * 100) : (activeProject ? activeProject.progress : 0);
   // Personal Tasks Metrics
-  const userPersonalTasks = personalTasks.filter((t) =>
-    selectedRole === 'all' ? true : t.assignedTo.includes(selectedRole)
-  );
+  const userPersonalTasks = personalTasks.filter((t) => {
+    if (selectedRole === 'all') return true;
+    return (
+      t.assignedTo === selectedRole ||
+      t.assignedTo.includes(selectedRole) ||
+      selectedRole.includes(t.assignedTo) ||
+      (isLeeAlias(selectedRole) && isLeeAlias(t.assignedTo)) ||
+      isSameMember(t.assignedTo, selectedRole, memberId)
+    );
+  });
   const totalPersonal = userPersonalTasks.length;
   const completedPersonal = userPersonalTasks.filter((t) => t.status === 'completed').length;
   const inProgressPersonal = userPersonalTasks.filter((t) => t.status === 'in_progress').length;

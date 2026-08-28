@@ -116,3 +116,15 @@ export interface NotificationItem {
   relatedTaskId?: string;
   targetRole?: string;
 }
+
+export interface WorkDocument {
+  id: string;
+  title: string;
+  category: string;
+  content: string; // HTML format rich text content
+  pages?: string[]; // Array of HTML strings for each page
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string;
+}
+

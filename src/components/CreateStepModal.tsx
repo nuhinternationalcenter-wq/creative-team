@@ -323,7 +323,7 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
               <div className="text-[11px] leading-relaxed">
                 {taskScope === 'team' ? (
                   <span>
-                    เมื่อคุณทำ <strong>งานกลุ่ม</strong> นี้เสร็จ จะมีปุ่ม <strong>"ส่งต่อ"</strong> บนการ์ดงาน เพื่อให้คุณเลือกว่าจะส่งต่อให้ใคร (เช่น แบฟีลี) พร้อมพิมพ์บรีฟงาน และงานจะไปปรากฏในช่องของเพื่อนคนนั้นทันที
+                    เมื่อคุณทำ <strong>งานกลุ่ม</strong> นี้เสร็จ จะมีปุ่ม <strong>"ส่งต่อ"</strong> บนการ์ดงาน เพื่อให้คุณเลือกว่าจะส่งต่อให้ใคร (เช่น Mr Lee) พร้อมพิมพ์บรีฟงาน และงานจะไปปรากฏในช่องของเพื่อนคนนั้นทันที
                   </span>
                 ) : (
                   <span>

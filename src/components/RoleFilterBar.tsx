@@ -2,20 +2,31 @@ import React from 'react';
 import { Users, Filter, X, Sparkles } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 import { getMemberColorStyle } from '../utils/memberColor';
+import { isSameMember, isLeeAlias } from '../utils/memberMatch';
 
 export const RoleFilterBar: React.FC = () => {
   const { members, updateMember, selectedRole, setSelectedRole, activeProject, personalTasks } = useWork();
 
-  const getMemberTaskCounts = (memberName: string) => {
+  const getMemberTaskCounts = (memberName: string, memberId?: string) => {
     let chainCount = 0;
     if (activeProject) {
-      chainCount = activeProject.steps.filter(
-        (s) => (s.assignedRole === memberName || s.assignedPerson === memberName) && s.status === 'in_progress'
-      ).length;
+      chainCount = activeProject.steps.filter((s) => {
+        const matches = 
+          s.assignedRole === memberName || 
+          s.assignedPerson === memberName ||
+          (isLeeAlias(memberName) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson))) ||
+          isSameMember(s.assignedRole, memberName, memberId) ||
+          isSameMember(s.assignedPerson, memberName, memberId);
+        return matches && s.status === 'in_progress';
+      }).length;
     }
-    const personalCount = personalTasks.filter(
-      (t) => t.assignedTo === memberName && t.status !== 'completed'
-    ).length;
+    const personalCount = personalTasks.filter((t) => {
+      const matches = 
+        t.assignedTo === memberName ||
+        (isLeeAlias(memberName) && isLeeAlias(t.assignedTo)) ||
+        isSameMember(t.assignedTo, memberName, memberId);
+      return matches && t.status !== 'completed';
+    }).length;
     return { chainCount, personalCount, total: chainCount + personalCount };
   };
 
@@ -46,8 +57,8 @@ export const RoleFilterBar: React.FC = () => {
 
           {/* Member chips */}
           {members.map((m) => {
-            const counts = getMemberTaskCounts(m.name);
-            const isSelected = selectedRole === m.name || selectedRole === m.id;
+            const counts = getMemberTaskCounts(m.name, m.id);
+            const isSelected = selectedRole === m.name || selectedRole === m.id || (isLeeAlias(selectedRole) && isLeeAlias(m.name));
 
             return (
               <button

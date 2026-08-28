@@ -25,6 +25,7 @@ import { SimpleStepListView } from './SimpleStepListView';
 import { StepDetailModal } from './StepDetailModal';
 import { StepHandoverModal } from './StepHandoverModal';
 import { ChainStep } from '../types';
+import { isSameMember, isLeeAlias } from '../utils/memberMatch';
 
 interface TeamChainBoardProps {
   onOpenCreateProject?: () => void;
@@ -59,12 +60,22 @@ export const TeamChainBoard: React.FC<TeamChainBoardProps> = ({ onOpenCreateProj
     );
   }
 
+  const selectedMemberObj = members.find((m) => m.name === selectedRole || m.id === selectedRole);
+  const memberId = selectedMemberObj ? selectedMemberObj.id : (isLeeAlias(selectedRole) ? 'lee' : '');
+
   // Filter steps
   const filteredSteps = activeProject.steps.filter((s) => {
     const matchesSearch = s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           s.assignedRole.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           s.assignedPerson.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = selectedRole === 'all' || s.assignedRole.includes(selectedRole) || s.assignedPerson.includes(selectedRole);
+    const matchesRole = selectedRole === 'all' || 
+      s.assignedRole === selectedRole ||
+      s.assignedPerson === selectedRole ||
+      s.assignedRole.includes(selectedRole) || 
+      s.assignedPerson.includes(selectedRole) ||
+      (isLeeAlias(selectedRole) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson))) ||
+      isSameMember(s.assignedRole, selectedRole, memberId) ||
+      isSameMember(s.assignedPerson, selectedRole, memberId);
     const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
   });

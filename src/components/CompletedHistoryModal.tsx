@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 import { ChainStep, TaskAttachment } from '../types';
+import { isSameMember, isLeeAlias } from '../utils/memberMatch';
 import { AttachmentManager } from './AttachmentManager';
 import { formatExternalUrl } from '../utils/url';
 
@@ -95,10 +96,16 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
     if (selectedAssignee !== 'all') {
       const target = selectedAssignee === 'my_tasks' ? selectedRole : selectedAssignee;
       if (target !== 'all') {
+        const memberObj = members.find((m) => m.name === target || m.id === target);
+        const memberId = memberObj ? memberObj.id : (isLeeAlias(target) ? 'lee' : '');
+
+        const matchExact = s.assignedRole === target || s.assignedPerson === target;
         const matchRole = s.assignedRole.includes(target) || target.includes(s.assignedRole);
         const matchPerson = s.assignedPerson.includes(target) || target.includes(s.assignedPerson);
-        const matchName = target.includes('ลี') && (s.assignedRole.includes('แบฟีลี') || s.assignedPerson.includes('แบฟีลี'));
-        if (!matchRole && !matchPerson && !matchName) return false;
+        const matchLee = isLeeAlias(target) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson));
+        const matchSameMember = isSameMember(s.assignedPerson, target, memberId) || isSameMember(s.assignedRole, target, memberId);
+        
+        if (!matchExact && !matchRole && !matchPerson && !matchLee && !matchSameMember) return false;
       }
     }
 

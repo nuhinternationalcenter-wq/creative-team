@@ -33,7 +33,7 @@ export const StepHandoverModal: React.FC<StepHandoverModalProps> = ({
 
   const [handoverComment, setHandoverComment] = useState('');
   const [durationMinutes, setDurationMinutes] = useState<number>(60);
-  const [targetRecipient, setTargetRecipient] = useState<string>('แบฟีลี');
+  const [targetRecipient, setTargetRecipient] = useState<string>('Mr Lee');
   const [nextTaskTitle, setNextTaskTitle] = useState('');
   const [nextDueDate, setNextDueDate] = useState(() => {
     const d = new Date();
@@ -50,12 +50,12 @@ export const StepHandoverModal: React.FC<StepHandoverModalProps> = ({
         setTargetRecipient(nextSteps[0].assignedRole);
         setNextTaskTitle(`ต่อจาก ${step.assignedRole}: ${nextSteps[0].title}`);
       } else {
-        // If step is from ฟานี, suggest แบฟีลี as top friendly default
+        // If step is from ฟานี, suggest Mr Lee as top friendly default
         if (step.assignedRole.includes('ฟานี')) {
-          setTargetRecipient('แบฟีลี');
+          setTargetRecipient('Mr Lee');
           setNextTaskTitle(`งานต่อจากฟานี: รีทัชและเตรียมภาพประกอบวิดีโอ`);
         } else {
-          setTargetRecipient(members[0]?.name || 'แบฟีลี');
+          setTargetRecipient(members[0]?.name || 'Mr Lee');
           setNextTaskTitle(`งานส่งต่อจาก ${step.assignedRole}: ${step.title}`);
         }
       }
@@ -171,7 +171,7 @@ export const StepHandoverModal: React.FC<StepHandoverModalProps> = ({
               rows={3}
               value={handoverComment}
               onChange={(e) => setHandoverComment(e.target.value)}
-              placeholder={`เช่น "ทำวิดีโอส่วนของฉันเสร็จแล้ว ช่วยแบฟีลีรีทัชรูป Lookbook ชุดสีน้ำเงิน 10 ภาพ และเตรียมภาพปกให้เสร็จภายในวันศุกร์ (ไฟล์อยู่ใน Drive โฟลเดอร์ SS26)"`}
+              placeholder={`เช่น "ทำวิดีโอส่วนของฉันเสร็จแล้ว ช่วย Mr Lee รีทัชรูป Lookbook ชุดสีน้ำเงิน 10 ภาพ และเตรียมภาพปกให้เสร็จภายในวันศุกร์ (ไฟล์อยู่ใน Drive โฟลเดอร์ SS26)"`}
               className="w-full text-xs sm:text-sm p-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition outline-none leading-relaxed"
             />
           </div>

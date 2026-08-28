@@ -37,6 +37,7 @@ import {
 import { ChainStep, TeamChainProject, StepStatus, TaskAttachment, TeamMember } from '../types';
 import { useWork } from '../context/WorkContext';
 import { getMemberColorStyle } from '../utils/memberColor';
+import { isSameMember, isLeeAlias } from '../utils/memberMatch';
 import { openExternalUrl } from '../utils/url';
 import { CreateStepModal } from './CreateStepModal';
 import { EditStepModal } from './EditStepModal';
@@ -186,6 +187,9 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
 
   // Group steps by role/member
   const getStepsByRole = (memberName: string) => {
+    const memberObj = members.find((m) => m.name === memberName || m.id === memberName);
+    const memberId = memberObj ? memberObj.id : '';
+
     return project.steps
       .filter((s) => {
         // Filter out completed tasks if hideCompletedOnBoard is enabled
@@ -202,16 +206,22 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
           if (!matchTitle && !matchDesc && !matchHandover) return false;
         }
 
-        if (memberName === 'แบฟีลี' || memberName === 'น้องลี' || memberName.includes('ลี')) {
+        if (s.assignedRole === memberName || s.assignedPerson === memberName) {
+          return true;
+        }
+
+        if (isLeeAlias(memberName) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson))) {
+          return true;
+        }
+
+        if (memberId) {
           return (
-            s.assignedRole.includes('แบฟีลี') || 
-            s.assignedRole.includes('น้องลี') || 
-            s.assignedRole.includes('ลี') ||
-            s.assignedPerson.includes('แบฟีลี') ||
-            s.assignedPerson.includes('น้องลี')
+            isSameMember(s.assignedPerson, memberName, memberId) ||
+            isSameMember(s.assignedRole, memberName, memberId)
           );
         }
-        return s.assignedRole.includes(memberName) || s.assignedPerson.includes(memberName);
+
+        return isSameMember(s.assignedPerson, memberName) || isSameMember(s.assignedRole, memberName);
       })
       .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   };
@@ -306,7 +316,7 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
     }
   };
 
-  const visibleMembers = selectedRole === "all" ? members : members.filter(m => m.name.includes(selectedRole) || selectedRole.includes(m.name) || (selectedRole.includes("ลี") && m.name.includes("แบฟีลี")));
+  const visibleMembers = selectedRole === "all" ? members : members.filter(m => m.name.includes(selectedRole) || selectedRole.includes(m.name) || isSameMember(m.name, selectedRole, m.id));
   const minColWidth = getColumnMinWidth();
   const totalMinWidth = visibleMembers.length * minColWidth;
 
@@ -668,7 +678,7 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
             const isHighlight = selectedRole !== 'all' && (
               member.name.includes(selectedRole) || 
               selectedRole.includes(member.name) ||
-              (selectedRole.includes('ลี') && member.name.includes('แบฟีลี'))
+              isSameMember(member.name, selectedRole, member.id)
             );
 
             const memberHex = member.color || colorStyle.hex;

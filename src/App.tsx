@@ -17,10 +17,11 @@ import { CreateProjectModal } from './components/CreateProjectModal';
 import { NotificationDrawer } from './components/NotificationDrawer';
 import { StepDetailModal } from './components/StepDetailModal';
 import { StepHandoverModal } from './components/StepHandoverModal';
+import { WorkDocumentsView } from './components/WorkDocumentsView';
 import { ChainStep, TeamChainProject } from './types';
 
 function MainAppContent() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'personal' | 'timeline'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'personal' | 'timeline' | 'documents' | 'team_chain'>('dashboard');
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState<TeamChainProject | null>(null);
@@ -30,6 +31,15 @@ function MainAppContent() {
   const [handoverStep, setHandoverStep] = useState<ChainStep | null>(null);
 
   const { activeProject, toast, dismissToast, setSelectedRole } = useWork();
+
+  // Check URL parameters for navigation hooks
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'documents') {
+      setActiveTab('documents');
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
@@ -142,6 +152,10 @@ function MainAppContent() {
             onOpenStepDetail={(step) => setSelectedStep(step)}
             onOpenHandover={(step) => setHandoverStep(step)}
           />
+        )}
+
+        {activeTab === 'documents' && (
+          <WorkDocumentsView />
         )}
       </main>
 

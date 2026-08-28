@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ChainStep } from '../types';
 import { useWork } from '../context/WorkContext';
+import { isSameMember, isLeeAlias } from '../utils/memberMatch';
 
 interface SimpleStepListViewProps {
   steps: ChainStep[];
@@ -53,8 +54,13 @@ export const SimpleStepListView: React.FC<SimpleStepListViewProps> = ({
           const isBlocked = step.status === 'blocked';
 
           const isMyRole = selectedRole !== 'all' && (
+            step.assignedRole === selectedRole ||
+            step.assignedPerson === selectedRole ||
             step.assignedRole.includes(selectedRole) || 
-            step.assignedPerson.includes(selectedRole)
+            step.assignedPerson.includes(selectedRole) ||
+            (isLeeAlias(selectedRole) && (isLeeAlias(step.assignedRole) || isLeeAlias(step.assignedPerson))) ||
+            isSameMember(step.assignedRole, selectedRole) ||
+            isSameMember(step.assignedPerson, selectedRole)
           );
 
           return (

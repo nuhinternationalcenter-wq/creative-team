@@ -10,7 +10,7 @@ export const INITIAL_MEMBERS: TeamMember[] = [
   { id: 'demy', name: 'เดะมี่', role: 'Photo Shoot Director', department: 'Creative & Media', avatarBg: 'bg-indigo-500', color: '#6366f1' },
   { id: 'fani', name: 'ฟานี', role: 'Video Content Director', department: 'Creative & Media', avatarBg: 'bg-pink-500', color: '#ec4899' },
   { id: 'seng', name: 'น้องเซ็ง', role: 'Video Editor (ตัดต่อวิดีโอ)', department: 'Post-Production', avatarBg: 'bg-cyan-500', color: '#06b6d4' },
-  { id: 'lee', name: 'แบฟีลี (น้องลี)', role: 'Photo Editor & Retouch (ตัดรูป/รีทัช)', department: 'Post-Production', avatarBg: 'bg-violet-500', color: '#8b5cf6' },
+  { id: 'lee', name: 'Mr Lee', role: 'Photo Editor & Retouch (ตัดรูป/รีทัช)', department: 'Post-Production', avatarBg: 'bg-violet-500', color: '#8b5cf6' },
   { id: 'gm', name: 'GM', role: 'General Manager', department: 'Management', avatarBg: 'bg-slate-700', color: '#334155' },
 ];
 
@@ -324,8 +324,8 @@ export const INITIAL_PROJECTS: TeamChainProject[] = [
       {
         id: 'step-19-photo',
         stepNumber: 19,
-        title: 'เดะมี่ส่งไฟล์ถ่ายแบบให้ฟานี แบฟีลี',
-        description: 'ส่ง Raw files & Selected images ให้ฟานีและน้องลี (แบฟีลี) รีทัช',
+        title: 'เดะมี่ส่งไฟล์ถ่ายแบบให้ฟานี Mr Lee',
+        description: 'ส่ง Raw files & Selected images ให้ฟานีและ Mr Lee รีทัช',
         assignedRole: 'เดะมี่',
         assignedPerson: 'เดะมี่',
         status: 'pending',
@@ -407,8 +407,8 @@ export const INITIAL_PROJECTS: TeamChainProject[] = [
       {
         id: 'step-19-video',
         stepNumber: 19,
-        title: 'ฟานีเลือกรูป คอนเฟิร์มส่งให้แบฟีลี',
-        description: 'เลือก Key Frame และภาพนิ่งที่เข้ากับวิดีโอส่งให้น้องลีทำปกคลิป',
+        title: 'ฟานีเลือกรูป คอนเฟิร์มส่งให้ Mr Lee',
+        description: 'เลือก Key Frame และภาพนิ่งที่เข้ากับวิดีโอส่งให้ Mr Lee ทำปกคลิป',
         assignedRole: 'ฟานี',
         assignedPerson: 'ฟานี',
         status: 'pending',
@@ -418,7 +418,7 @@ export const INITIAL_PROJECTS: TeamChainProject[] = [
         estimatedHours: 3
       },
 
-      // Branch 5: Final Post-Production (น้องเซ็ง & น้องลี)
+      // Branch 5: Final Post-Production (น้องเซ็ง & Mr Lee)
       {
         id: 'step-20-video',
         stepNumber: 20,
@@ -435,10 +435,10 @@ export const INITIAL_PROJECTS: TeamChainProject[] = [
       {
         id: 'step-20-photo',
         stepNumber: 20,
-        title: '20. น้องลี: ตัดรูปทั้งหมด',
+        title: '20. Mr Lee: ตัดรูปทั้งหมด',
         description: 'รีทัชภาพถ่าย ไดคัท ปรับโทนสี และจัดทำกราฟิกโปรโมตทุกขนาด',
-        assignedRole: 'น้องลี',
-        assignedPerson: 'น้องลี (แบฟีลี)',
+        assignedRole: 'Mr Lee',
+        assignedPerson: 'Mr Lee',
         status: 'pending',
         dueDate: '2026-09-12',
         dependencies: ['step-19-photo', 'step-19-video'],
@@ -581,5 +581,110 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     read: true,
     relatedProjectId: 'proj-001',
     relatedStepId: 'step-5'
+  }
+];
+
+export const INITIAL_DOCUMENTS = [
+  {
+    id: 'doc-001',
+    title: 'สคริปต์ไลฟ์สดเปิดตัวคอลเลกชันใหม่ SS26',
+    category: 'scripts',
+    content: `
+      <div style="font-family: 'Prompt', sans-serif; line-height: 1.6; color: #1e293b; padding: 10px;">
+        <h1 style="font-size: 24px; font-weight: bold; color: #1d4ed8; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px;">
+          สคริปต์สำหรับการไลฟ์สดเปิดตัวคอลเลกชันใหม่ 2026 (SS26-MAIN)
+        </h1>
+        <p style="margin-bottom: 12px;"><strong>ผู้รับผิดชอบ:</strong> ทีมการตลาด (MKT)</p>
+        <p style="margin-bottom: 12px;"><strong>วันที่วางแผน:</strong> 2026-08-27</p>
+        
+        <h2 style="font-size: 18px; font-weight: bold; color: #0f172a; margin-top: 20px; margin-bottom: 10px;">ช่วงที่ 1: แนะนำตัวและดึงดูดผู้เข้าชม (นาทีที่ 0-5)</h2>
+        <p style="margin-bottom: 12px; background-color: #f1f5f9; padding: 12px; border-left: 4px solid #3b82f6; border-radius: 4px;">
+          <em>"สวัสดีค่ะทุกคนนน ยินดีต้อนรับเข้าสู่ Live เปิดตัวคอลเลกชันพิเศษสุดแห่งปี SS26 ของเรานะคะ! ใครเข้ามาแล้วพิมพ์ทักทาย กดไลก์ กดแชร์กันหน่อยน้าาา วันนี้เรามีเซอร์ไพรส์ใหญ่ แจกของรางวัลพรีเมียมและโปรลดพิเศษสุดที่มีเฉพาะในไลฟ์นี้เท่านั้น!"</em>
+        </p>
+
+        <h2 style="font-size: 18px; font-weight: bold; color: #0f172a; margin-top: 20px; margin-bottom: 10px;">ช่วงที่ 2: เจาะลึก Concept & งานดีไซน์ (นาทีที่ 5-15)</h2>
+        <p style="margin-bottom: 12px;">ดึงเอาแนวคิด <strong>Modern Minimal ผสมโทนสีธรรมชาติ (โดยคุณมีมี่ Concept Design Lead)</strong> มาเล่าให้ผู้ฟังอินกับความประณีต:</p>
+        <ul style="list-style-type: disc; margin-left: 20px; margin-bottom: 16px;">
+          <li style="margin-bottom: 6px;">เล่าถึงเส้นใยธรรมชาติและสัมผัสที่เป็นมิตรต่อสิ่งแวดล้อม</li>
+          <li style="margin-bottom: 6px;">ชูจุดเด่น ลายผ้าลิขสิทธิ์เฉพาะ 6 ลายเด่นของปีนี้</li>
+        </ul>
+
+        <h2 style="font-size: 18px; font-weight: bold; color: #0f172a; margin-top: 20px; margin-bottom: 10px;">ช่วงที่ 3: เปิดตัวราคาสินค้าและสิทธิพิเศษ (นาทีที่ 15-30)</h2>
+        <p style="margin-bottom: 12px;">ชี้เป้ารหัสส่วนลดสินค้าเฉพาะในไลฟ์ พิมพ์คำว่า <strong>"SS26NEW"</strong> รับส่วนลดพิเศษ 15% พร้อมส่งฟรีทันที!</p>
+      </div>
+    `,
+    createdAt: '2026-08-27T10:00:00Z',
+    createdBy: 'MKT (การตลาด)',
+    updatedAt: '2026-08-27T10:00:00Z'
+  },
+  {
+    id: 'doc-002',
+    title: 'คอนเทนต์เปิดตัวคอลเลกชันใหม่ทาง Facebook & Instagram',
+    category: 'contents',
+    content: `
+      <div style="font-family: 'Prompt', sans-serif; line-height: 1.6; color: #1e293b; padding: 10px;">
+        <h1 style="font-size: 24px; font-weight: bold; color: #10b981; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px;">
+          แผนโพสต์คอนเทนต์เปิดตัวทางโซเชียลมีเดีย
+        </h1>
+        <p style="margin-bottom: 12px;"><strong>สไตล์คอนเทนต์:</strong> Aesthetic, Minimalist, Earth tone</p>
+
+        <h2 style="font-size: 18px; font-weight: bold; color: #0f172a; margin-top: 20px; margin-bottom: 10px;">หัวข้อโพสต์: "The Art of Simplicity - New Collection SS26"</h2>
+        <p style="margin-bottom: 12px; font-weight: 500;">รายละเอียดแคปชันโพสต์:</p>
+        <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+          ✨ สัมผัสความเบาสบายและดีไซน์ประณีตที่ลงตัว... ต้อนรับความเรียบง่ายรูปแบบใหม่กับ คอลเลกชันพิเศษ "Modern Minimal 2026"<br/><br/>
+          คัดสรรเส้นใยผ้าแบบพิเศษ อ่อนโยนต่อผิวสัมผัส สะท้อนตัวตนของคุณในแบบที่เรียบง่ายแต่เปี่ยมด้วยเรื่องราว<br/><br/>
+          🛍️ สั่งจองก่อนใครแบบ Early Bird วันนี้ รับทันทีส่วนลด 15% พร้อมรับกระเป๋าผ้าพิมพ์ลายคอลเลกชันฟรี!<br/>
+          👉 สนใจพิมพ์ "SS26" ใต้คอมเมนต์นี้เลยค่ะ!
+        </div>
+
+        <h2 style="font-size: 18px; font-weight: bold; color: #0f172a; margin-top: 20px; margin-bottom: 10px;">ภาพประกอบและมู้ดแอนด์โทน (Moodboard)</h2>
+        <p style="margin-bottom: 12px;">จัดวางรูปภาพแบบคอลลาจ (Grid 4 ช่อง) เน้นภาพพอร์ตเทรตพนักงานและโทนธรรมชาติอบอุ่น</p>
+      </div>
+    `,
+    createdAt: '2026-08-27T11:00:00Z',
+    createdBy: 'มีมี่',
+    updatedAt: '2026-08-27T11:00:00Z'
+  },
+  {
+    id: 'doc-003',
+    title: 'รายละเอียดโปรโมชั่นเปิดตัวคอลเลกชันพิเศษ',
+    category: 'promotions',
+    content: `
+      <div style="font-family: 'Prompt', sans-serif; line-height: 1.6; color: #1e293b; padding: 10px;">
+        <h1 style="font-size: 24px; font-weight: bold; color: #ea580c; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px;">
+          รายละเอียดข้อเสนอแคมเปญและโปรโมชั่น (Promotion Details)
+        </h1>
+        
+        <h2 style="font-size: 18px; font-weight: bold; color: #0f172a; margin-top: 20px; margin-bottom: 10px;">โปรโมชั่นหลัก: "Early Bird Launch Campaign"</h2>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 12px; margin-bottom: 16px;">
+          <thead>
+            <tr style="background-color: #fef2f2; border-bottom: 2px solid #fca5a5;">
+              <th style="padding: 10px; text-align: left; border: 1px solid #fee2e2;">เงื่อนไขหลัก</th>
+              <th style="padding: 10px; text-align: left; border: 1px solid #fee2e2;">ส่วนลดสิทธิพิเศษ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #fee2e2;">สั่งซื้อก่อนวันที่ 5 กันยายน 2026</td>
+              <td style="padding: 10px; border: 1px solid #fee2e2; color: #ea580c; font-weight: bold;">ส่วนลด 15% ทันที</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #fee2e2;">ยอดสั่งซื้อครบ 2,500 บาท</td>
+              <td style="padding: 10px; border: 1px solid #fee2e2; color: #ea580c; font-weight: bold;">แถมร่มพับสกรีนโลโก้ คอลเลกชันใหม่ และจัดส่งฟรี</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2 style="font-size: 18px; font-weight: bold; color: #0f172a; margin-top: 20px; margin-bottom: 10px;">วิธีการใช้งานสำหรับพนักงานแอดมิน (Admin / CSR บัญชี)</h2>
+        <ol style="list-style-type: decimal; margin-left: 20px; margin-bottom: 16px;">
+          <li style="margin-bottom: 6px;">ตรวจสอบยอดโอนเงินให้ตรงตามตารางราคาส่วนลด</li>
+          <li style="margin-bottom: 6px;">เลือกประเภทคูปองโค้ดในระบบ ERP รหัส "EARLYSS26"</li>
+          <li style="margin-bottom: 6px;">ระบบจะคำนวณราคาส่วนลดและแถมของอัตโนมัติ</li>
+        </ol>
+      </div>
+    `,
+    createdAt: '2026-08-27T12:00:00Z',
+    createdBy: 'NPD',
+    updatedAt: '2026-08-27T12:00:00Z'
   }
 ];

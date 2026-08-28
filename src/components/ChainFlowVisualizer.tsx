@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ChainStep, TeamChainProject, StepStatus } from '../types';
 import { useWork } from '../context/WorkContext';
+import { isSameMember, isLeeAlias } from '../utils/memberMatch';
 
 interface ChainFlowVisualizerProps {
   project: TeamChainProject;
@@ -54,7 +55,7 @@ export const ChainFlowVisualizer: React.FC<ChainFlowVisualizerProps> = ({
     {
       id: 'phase-4',
       title: 'ขั้นตอนที่ 4: โพสต์โปรดักชั่น & ส่งมอบงาน (Post-Production & Final Assets)',
-      subtitle: 'น้องเซ็ง (ตัดต่อวิดีโอ) & น้องลี (รีทัชรูป) (Step 20)',
+      subtitle: 'น้องเซ็ง (ตัดต่อวิดีโอ) & Mr Lee (รีทัชรูป) (Step 20)',
       badgeColor: 'bg-cyan-100 text-cyan-800 border-cyan-200',
       stepNumbers: [20],
     },
@@ -168,7 +169,15 @@ export const ChainFlowVisualizer: React.FC<ChainFlowVisualizerProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
                 {phaseSteps.map((step) => {
                   const details = getStepStatusDetails(step);
-                  const isRoleMatch = selectedRole !== 'all' && (step.assignedRole.includes(selectedRole) || step.assignedPerson.includes(selectedRole));
+                  const isRoleMatch = selectedRole !== 'all' && (
+                    step.assignedRole === selectedRole ||
+                    step.assignedPerson === selectedRole ||
+                    step.assignedRole.includes(selectedRole) || 
+                    step.assignedPerson.includes(selectedRole) ||
+                    (isLeeAlias(selectedRole) && (isLeeAlias(step.assignedRole) || isLeeAlias(step.assignedPerson))) ||
+                    isSameMember(step.assignedRole, selectedRole) ||
+                    isSameMember(step.assignedPerson, selectedRole)
+                  );
 
                   return (
                     <div

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 import { ChainStep, PersonalTask, TeamChainProject } from '../types';
+import { isSameMember, isLeeAlias } from '../utils/memberMatch';
 import { PersonalTaskHandoverModal } from './PersonalTaskHandoverModal';
 import { StepHandoverModal } from './StepHandoverModal';
 import { EditStepModal } from './EditStepModal';
@@ -83,12 +84,28 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
   const allItems: UnifiedDueItem[] = useMemo(() => {
     const list: UnifiedDueItem[] = [];
 
+    const selectedMemberObj = members.find((m) => m.name === selectedRole || m.id === selectedRole);
+    const memberId = selectedMemberObj ? selectedMemberObj.id : (isLeeAlias(selectedRole) ? 'lee' : '');
+
     // 1. Team Chain steps from all projects (or active project)
     projects.forEach((proj) => {
       proj.steps.forEach((s) => {
         const matchesType = filterType === 'all' || filterType === 'chain';
-        const matchesGlobalRole = selectedRole === 'all' || s.assignedRole.includes(selectedRole) || s.assignedPerson.includes(selectedRole);
-        const matchesMember = filterMember === 'all' || s.assignedPerson === filterMember || s.assignedRole.includes(filterMember);
+        const matchesGlobalRole = selectedRole === 'all' || 
+          s.assignedRole === selectedRole ||
+          s.assignedPerson === selectedRole ||
+          s.assignedRole.includes(selectedRole) || 
+          s.assignedPerson.includes(selectedRole) ||
+          (isLeeAlias(selectedRole) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson))) ||
+          isSameMember(s.assignedRole, selectedRole, memberId) ||
+          isSameMember(s.assignedPerson, selectedRole, memberId);
+        
+        const matchesMember = filterMember === 'all' || 
+          s.assignedPerson === filterMember || 
+          s.assignedRole.includes(filterMember) ||
+          (isLeeAlias(filterMember) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson))) ||
+          isSameMember(s.assignedPerson, filterMember) ||
+          isSameMember(s.assignedRole, filterMember);
 
         if (matchesType && matchesGlobalRole && matchesMember) {
           list.push({
@@ -113,8 +130,17 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
     // 2. Personal tasks
     personalTasks.forEach((t) => {
       const matchesType = filterType === 'all' || filterType === 'personal';
-      const matchesGlobalRole = selectedRole === 'all' || t.assignedTo.includes(selectedRole);
-      const matchesMember = filterMember === 'all' || t.assignedTo === filterMember;
+      const matchesGlobalRole = selectedRole === 'all' || 
+        t.assignedTo === selectedRole ||
+        t.assignedTo.includes(selectedRole) ||
+        selectedRole.includes(t.assignedTo) ||
+        (isLeeAlias(selectedRole) && isLeeAlias(t.assignedTo)) ||
+        isSameMember(t.assignedTo, selectedRole, memberId);
+
+      const matchesMember = filterMember === 'all' || 
+        t.assignedTo === filterMember ||
+        (isLeeAlias(filterMember) && isLeeAlias(t.assignedTo)) ||
+        isSameMember(t.assignedTo, filterMember);
 
       if (matchesType && matchesGlobalRole && matchesMember) {
         list.push({

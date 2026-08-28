@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 import { PersonalTask, PriorityLevel, TaskAttachment } from '../types';
+import { isSameMember, isLeeAlias } from '../utils/memberMatch';
 import { PersonalTaskHandoverModal } from './PersonalTaskHandoverModal';
 import { AttachmentManager } from './AttachmentManager';
 import { openExternalUrl } from '../utils/url';
@@ -61,7 +62,15 @@ export const PersonalTasksView: React.FC<PersonalTasksViewProps> = ({
                           t.assignedTo.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (t.handedOverFrom && t.handedOverFrom.toLowerCase().includes(searchQuery.toLowerCase())) ||
                           (t.handedOverTo && t.handedOverTo.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesRole = selectedRole === 'all' || t.assignedTo.includes(selectedRole);
+    const selectedMemberObj = members.find((m) => m.name === selectedRole || m.id === selectedRole);
+    const memberId = selectedMemberObj ? selectedMemberObj.id : (isLeeAlias(selectedRole) ? 'lee' : '');
+
+    const matchesRole = selectedRole === 'all' || 
+      t.assignedTo.toLowerCase() === selectedRole.toLowerCase() ||
+      t.assignedTo.includes(selectedRole) ||
+      selectedRole.includes(t.assignedTo) ||
+      (isLeeAlias(selectedRole) && isLeeAlias(t.assignedTo)) ||
+      isSameMember(t.assignedTo, selectedRole, memberId);
     
     let matchesStatus = true;
     if (statusFilter === 'handover') {
