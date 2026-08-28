@@ -93,6 +93,7 @@ export interface TeamChainProject {
   progress: number;
   createdAt: string;
   updatedAt: string;
+  allowedMembers?: string[];
 }
 
 export interface ChecklistItem {
@@ -133,6 +134,7 @@ export interface PersonalTask {
   approvalComment?: string;
   approvalAttachments?: TaskAttachment[]; // รูปภาพและไฟล์ประกอบการแจ้งแก้ไข/อนุมัติ
   approvalHistory?: ApprovalLogEntry[];
+  allowedMembers?: string[];
 }
 
 export interface NotificationItem {

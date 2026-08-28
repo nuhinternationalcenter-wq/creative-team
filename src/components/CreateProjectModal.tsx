@@ -40,6 +40,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     return d.toISOString().split('T')[0];
   });
   const [useTemplate, setUseTemplate] = useState(true);
+  const [allowedMembers, setAllowedMembers] = useState<string[]>([]);
 
   // Add Step State
   const [stepTitle, setStepTitle] = useState('');
@@ -62,6 +63,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       setPriority(projectToEdit.priority);
       setStartDate(projectToEdit.startDate);
       setTargetDate(projectToEdit.targetDate);
+      setAllowedMembers(projectToEdit.allowedMembers || []);
     } else {
       setMode('new_project');
       setProjectTitle('');
@@ -70,6 +72,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       setDescription('');
       setPriority('high');
       setUseTemplate(true);
+      setAllowedMembers([]);
     }
   }, [projectToEdit, isOpen]);
 
@@ -88,6 +91,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
         priority,
         startDate,
         targetDate,
+        allowedMembers,
       });
       onClose();
       return;
@@ -127,6 +131,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       targetDate,
       status: 'active',
       steps: templateSteps as any,
+      allowedMembers,
     });
 
     onClose();
@@ -269,6 +274,32 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 placeholder="ระบุรายละเอียดสำคัญ..."
                 className="w-full text-xs p-2.5 rounded-xl border border-slate-300 outline-none"
               />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-slate-700">สมาชิกที่เข้าถึงโปรเจกต์ได้ (ปล่อยว่างหากให้ทุกคนเห็น)</label>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {members.map((member) => (
+                  <button
+                    key={member.id}
+                    type="button"
+                    onClick={() => {
+                      setAllowedMembers(prev => 
+                        prev.includes(member.name) 
+                          ? prev.filter(m => m !== member.name)
+                          : [...prev, member.name]
+                      );
+                    }}
+                    className={`px-3 py-1 rounded-full text-[10px] border transition ${
+                      allowedMembers.includes(member.name)
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white text-slate-600 border-slate-300 hover:border-indigo-400'
+                    }`}
+                  >
+                    {member.name}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Template Toggle */}

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { 
   TeamChainProject, 
@@ -43,6 +43,8 @@ interface WorkContextType {
   setSelectedRole: (role: string) => void;
   activeProject: TeamChainProject | null;
   setActiveProjectId: (id: string) => void;
+  visibleProjects: TeamChainProject[];
+  visiblePersonalTasks: PersonalTask[];
   toast: ToastNotification | null;
   dismissToast: () => void;
 
@@ -421,6 +423,16 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [selectedRole]);
 
   const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0] || null;
+
+  const visibleProjects = useMemo(() => {
+    if (selectedRole === 'all' || isLeeAlias(selectedRole)) return projects;
+    return projects.filter(p => !p.allowedMembers || p.allowedMembers.includes(selectedRole));
+  }, [projects, selectedRole]);
+
+  const visiblePersonalTasks = useMemo(() => {
+    if (selectedRole === 'all' || isLeeAlias(selectedRole)) return personalTasks;
+    return personalTasks.filter(t => !t.allowedMembers || t.allowedMembers.includes(selectedRole));
+  }, [personalTasks, selectedRole]);
 
   // Member CRUD
   const addMember = (newMemberData: Omit<TeamMember, 'id'>) => {
@@ -1031,6 +1043,8 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ...s,
             status: 'completed' as StepStatus,
             approvalStatus: 'approved' as ApprovalStatus,
+            assignedPerson: targetSubmitter || s.assignedPerson,
+            assignedRole: targetSubmitter || s.assignedRole,
             completedAt: nowIso,
             approvalComment: comment || s.approvalComment,
             workLogs: [...(s.workLogs || []), newLog],
@@ -1534,6 +1548,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ...t,
           status: 'completed' as const,
           approvalStatus: 'approved' as ApprovalStatus,
+          assignedTo: submitter || t.assignedTo,
           completedAt: nowIso,
           approvalComment: comment || t.approvalComment,
           workLogs: [...(t.workLogs || []), newLog],
@@ -1778,6 +1793,8 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSelectedRole,
         activeProject,
         setActiveProjectId,
+        visibleProjects,
+        visiblePersonalTasks,
         toast,
         dismissToast,
         updateStepStatus,

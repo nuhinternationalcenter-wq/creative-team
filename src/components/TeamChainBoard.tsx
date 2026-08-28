@@ -34,7 +34,7 @@ interface TeamChainBoardProps {
 
 export const TeamChainBoard: React.FC<TeamChainBoardProps> = ({ onOpenCreateProject, onOpenEditProject }) => {
   const { 
-    projects, 
+    visibleProjects: projects,
     activeProject, 
     setActiveProjectId, 
     selectedRole,

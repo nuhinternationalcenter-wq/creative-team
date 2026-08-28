@@ -55,9 +55,9 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
   onOpenHandover,
 }) => {
   const { 
-    projects, 
+    visibleProjects: projects, 
     activeProject, 
-    personalTasks, 
+    visiblePersonalTasks: personalTasks, 
     selectedRole, 
     members,
     updatePersonalTask,

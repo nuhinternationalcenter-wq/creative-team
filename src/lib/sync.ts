@@ -105,14 +105,16 @@ export const syncToFirestore = (data: any) => {
   
   const cleanData = removeUndefinedValues(data);
   syncTimeout = setTimeout(async () => {
+    console.log("Syncing to Firestore triggered");
     const path = `settings/${WORKSPACE_DOC_ID}`;
     try {
       await setDoc(doc(db, 'settings', WORKSPACE_DOC_ID), cleanData, { merge: true });
+      console.log("Sync to Firestore successful");
     } catch (e: any) {
       console.error("Error syncing to Firestore", e);
       handleFirestoreError(e, OperationType.WRITE, path);
     }
-  }, 300);
+  }, 1000);
 };
 
 /**
