@@ -163,27 +163,32 @@ export const ApprovalActionModal: React.FC<ApprovalActionModalProps> = ({
       return;
     }
 
-    if (effectiveTarget.type === 'step' && effectiveTarget.projectId) {
-      if (action === 'approve') {
-        approveStep(effectiveTarget.projectId, effectiveTarget.item.id, approverName, comment.trim() || 'อนุมัติเรียบร้อยแล้ว');
-      } else if (action === 'revision') {
-        requestStepRevision(effectiveTarget.projectId, effectiveTarget.item.id, approverName, comment.trim(), attachments);
-      } else if (action === 'reject') {
-        rejectStep(effectiveTarget.projectId, effectiveTarget.item.id, approverName, comment.trim());
+    try {
+      if (effectiveTarget.type === 'step' && effectiveTarget.projectId) {
+        if (action === 'approve') {
+          approveStep(effectiveTarget.projectId, effectiveTarget.item.id, approverName, comment.trim() || 'อนุมัติเรียบร้อยแล้ว');
+        } else if (action === 'revision') {
+          requestStepRevision(effectiveTarget.projectId, effectiveTarget.item.id, approverName, comment.trim(), attachments);
+        } else if (action === 'reject') {
+          rejectStep(effectiveTarget.projectId, effectiveTarget.item.id, approverName, comment.trim());
+        }
+      } else if (effectiveTarget.type === 'personal_task') {
+        if (action === 'approve') {
+          approvePersonalTask(effectiveTarget.item.id, approverName, comment.trim() || 'อนุมัติเรียบร้อยแล้ว');
+        } else if (action === 'revision') {
+          requestPersonalTaskRevision(effectiveTarget.item.id, approverName, comment.trim(), attachments);
+        } else if (action === 'reject') {
+          rejectPersonalTask(effectiveTarget.item.id, approverName, comment.trim());
+        }
       }
-    } else if (effectiveTarget.type === 'personal_task') {
-      if (action === 'approve') {
-        approvePersonalTask(effectiveTarget.item.id, approverName, comment.trim() || 'อนุมัติเรียบร้อยแล้ว');
-      } else if (action === 'revision') {
-        requestPersonalTaskRevision(effectiveTarget.item.id, approverName, comment.trim(), attachments);
-      } else if (action === 'reject') {
-        rejectPersonalTask(effectiveTarget.item.id, approverName, comment.trim());
-      }
+    } catch (error) {
+      console.error('Error during approval action:', error);
+      alert('เกิดข้อผิดพลาดในการดำเนินการ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      onClose();
+      setComment('');
+      setAttachments([]);
     }
-
-    onClose();
-    setComment('');
-    setAttachments([]);
   };
 
   return (
@@ -222,7 +227,7 @@ export const ApprovalActionModal: React.FC<ApprovalActionModalProps> = ({
           <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                {target.type === 'step' ? '📌 สเต็ปงานในกระบวนการ' : '📝 งานส่วนตัว'}
+                {effectiveTarget.type === 'step' ? '📌 สเต็ปงานในกระบวนการ' : '📝 งานส่วนตัว'}
               </span>
               <span className="text-[11px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full flex items-center space-x-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
@@ -232,19 +237,19 @@ export const ApprovalActionModal: React.FC<ApprovalActionModalProps> = ({
             <h4 className="text-sm font-bold text-slate-900 leading-snug">{title}</h4>
             
             {/* Submitter's Note if any */}
-            {target.item.approvalComment && (
+            {effectiveTarget.item.approvalComment && (
               <div className="p-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 space-y-0.5">
                 <span className="font-bold text-slate-800 block text-[11px]">💬 ข้อความจากผู้ส่งตรวจ:</span>
-                <p className="italic text-slate-600 leading-relaxed">{target.item.approvalComment}</p>
+                <p className="italic text-slate-600 leading-relaxed">{effectiveTarget.item.approvalComment}</p>
               </div>
             )}
 
             {/* Submitter Attachments if any */}
-            {target.item.attachments && target.item.attachments.length > 0 && (
+            {effectiveTarget.item.attachments && effectiveTarget.item.attachments.length > 0 && (
               <div className="pt-1.5 border-t border-slate-200 space-y-1">
-                <span className="text-[11px] font-bold text-slate-600 block">📎 ไฟล์ / รูปที่ส่งตรวจ ({target.item.attachments.length} รายการ):</span>
+                <span className="text-[11px] font-bold text-slate-600 block">📎 ไฟล์ / รูปที่ส่งตรวจ ({effectiveTarget.item.attachments.length} รายการ):</span>
                 <div className="flex flex-wrap gap-2">
-                  {target.item.attachments.map((att) => (
+                  {effectiveTarget.item.attachments.map((att) => (
                     <a
                       key={att.id}
                       href={att.url}

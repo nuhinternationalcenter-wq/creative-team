@@ -304,7 +304,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (data.themeColor !== undefined) setThemeColorState(data.themeColor);
           setTimeout(() => {
             isRemoteUpdateRef.current = false;
-          }, 150);
+          }, 1000);
         }
       });
       return () => unsubscribe();
