@@ -75,7 +75,7 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-          const maxDim = 1200;
+          const maxDim = 800;
 
           if (width > maxDim || height > maxDim) {
             if (width > height) {
@@ -95,7 +95,7 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
             return;
           }
           ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.8));
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
         };
         img.onerror = () => resolve(event.target?.result as string);
         img.src = event.target?.result as string;

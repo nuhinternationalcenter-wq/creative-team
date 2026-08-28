@@ -57,7 +57,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         s.assignedPerson.includes(selectedRole) ||
         (isLeeAlias(selectedRole) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson))) ||
         isSameMember(s.assignedRole, selectedRole, memberId) ||
-        isSameMember(s.assignedPerson, selectedRole, memberId)
+        isSameMember(s.assignedPerson, selectedRole, memberId) ||
+        (s.status === 'waiting_approval' && (
+          s.approverRole === selectedRole ||
+          s.approverRole?.includes(selectedRole) ||
+          selectedRole.includes(s.approverRole || '') ||
+          (isLeeAlias(selectedRole) && isLeeAlias(s.approverRole)) ||
+          isSameMember(s.approverRole, selectedRole, memberId)
+        ))
     );
   };
   
@@ -72,13 +79,24 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     if (!t) return false;
     if (selectedRole === 'all') return true;
     const assigned = t.assignedTo || '';
-    return (
+    const approver = t.approverRole || '';
+    const isAssigned = (
       assigned === selectedRole ||
       assigned.includes(selectedRole) ||
       selectedRole.includes(assigned) ||
       (isLeeAlias(selectedRole) && isLeeAlias(assigned)) ||
       isSameMember(assigned, selectedRole, memberId)
     );
+    const isWaitingApprovalForMe = (
+      t.status === 'waiting_approval' && (
+        approver === selectedRole ||
+        approver.includes(selectedRole) ||
+        selectedRole.includes(approver) ||
+        (isLeeAlias(selectedRole) && isLeeAlias(approver)) ||
+        isSameMember(approver, selectedRole, memberId)
+      )
+    );
+    return isAssigned || isWaitingApprovalForMe;
   });
   const totalPersonal = userPersonalTasks.length;
   const completedPersonal = userPersonalTasks.filter((t) => t.status === 'completed').length;

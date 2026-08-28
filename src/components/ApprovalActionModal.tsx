@@ -93,7 +93,7 @@ export const ApprovalActionModal: React.FC<ApprovalActionModalProps> = ({
 
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        if (item.type.indexOf('image') !== -1) {
+        if (item?.type && item.type.indexOf('image') !== -1) {
           e.preventDefault();
           const file = item.getAsFile();
           if (file) {

@@ -14,6 +14,9 @@ export enum OperationType {
 
 function removeUndefinedValues(obj: any): any {
   if (obj === null || typeof obj !== 'object') {
+    if (typeof obj === 'string' && obj.startsWith('data:image/') && obj.length > 200000) {
+      return '[Large Base64 Image Omitted for Firestore]';
+    }
     return obj;
   }
   if (Array.isArray(obj)) {
@@ -24,7 +27,11 @@ function removeUndefinedValues(obj: any): any {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const val = obj[key];
       if (val !== undefined) {
-        clean[key] = removeUndefinedValues(val);
+        if (key === 'url' && typeof val === 'string' && val.startsWith('data:image/') && val.length > 200000) {
+          clean[key] = '[Large Base64 Image Omitted for Firestore]';
+        } else {
+          clean[key] = removeUndefinedValues(val);
+        }
       }
     }
   }

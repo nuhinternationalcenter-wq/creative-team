@@ -94,19 +94,30 @@ export const PersonalTasksView: React.FC<PersonalTasksViewProps> = ({
   const selectedMemberObj = members.find((m) => m.name === selectedRole || m.id === selectedRole);
   const memberId = selectedMemberObj ? selectedMemberObj.id : (isLeeAlias(selectedRole) ? 'lee' : '');
 
-  // Scope tasks: tasks that match the selected member
+  // Scope tasks: tasks that match the selected member or waiting approval for the approver
   const roleScopedTasks = useMemo(() => {
     return personalTasks.filter((t) => {
       if (!t) return false;
       if (selectedRole === 'all') return true;
       const assigned = t.assignedTo || '';
-      return (
+      const approver = t.approverRole || '';
+      const isAssigned = (
         assigned.toLowerCase() === selectedRole.toLowerCase() ||
         assigned.includes(selectedRole) ||
         selectedRole.includes(assigned) ||
         (isLeeAlias(selectedRole) && isLeeAlias(assigned)) ||
         isSameMember(assigned, selectedRole, memberId)
       );
+      const isWaitingApprovalForMe = (
+        t.status === 'waiting_approval' && (
+          approver.toLowerCase() === selectedRole.toLowerCase() ||
+          approver.includes(selectedRole) ||
+          selectedRole.includes(approver) ||
+          (isLeeAlias(selectedRole) && isLeeAlias(approver)) ||
+          isSameMember(approver, selectedRole, memberId)
+        )
+      );
+      return isAssigned || isWaitingApprovalForMe;
     });
   }, [personalTasks, selectedRole, memberId]);
 

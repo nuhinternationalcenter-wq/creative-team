@@ -67,7 +67,14 @@ export const SimpleStepListView: React.FC<SimpleStepListViewProps> = ({
             step.assignedPerson.includes(selectedRole) ||
             (isLeeAlias(selectedRole) && (isLeeAlias(step.assignedRole) || isLeeAlias(step.assignedPerson))) ||
             isSameMember(step.assignedRole, selectedRole) ||
-            isSameMember(step.assignedPerson, selectedRole)
+            isSameMember(step.assignedPerson, selectedRole) ||
+            (isWaiting && (
+              step.approverRole === selectedRole ||
+              step.approverRole?.includes(selectedRole) ||
+              selectedRole.includes(step.approverRole || '') ||
+              (isLeeAlias(selectedRole) && isLeeAlias(step.approverRole)) ||
+              isSameMember(step.approverRole, selectedRole)
+            ))
           );
 
           return (

@@ -211,22 +211,27 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
           if (!matchTitle && !matchDesc && !matchHandover) return false;
         }
 
-        if (s.assignedRole === memberName || s.assignedPerson === memberName) {
-          return true;
-        }
+        const isAssigned = (
+          s.assignedRole === memberName || 
+          s.assignedPerson === memberName ||
+          (isLeeAlias(memberName) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson))) ||
+          (memberId && (isSameMember(s.assignedPerson, memberName, memberId) || isSameMember(s.assignedRole, memberName, memberId))) ||
+          isSameMember(s.assignedPerson, memberName) || 
+          isSameMember(s.assignedRole, memberName)
+        );
 
-        if (isLeeAlias(memberName) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson))) {
-          return true;
-        }
+        const isWaitingApprovalForMember = (
+          s.status === 'waiting_approval' && (
+            s.approverRole === memberName ||
+            s.approverRole?.includes(memberName) ||
+            memberName.includes(s.approverRole || '') ||
+            (isLeeAlias(memberName) && isLeeAlias(s.approverRole)) ||
+            (memberId && isSameMember(s.approverRole, memberName, memberId)) ||
+            isSameMember(s.approverRole, memberName)
+          )
+        );
 
-        if (memberId) {
-          return (
-            isSameMember(s.assignedPerson, memberName, memberId) ||
-            isSameMember(s.assignedRole, memberName, memberId)
-          );
-        }
-
-        return isSameMember(s.assignedPerson, memberName) || isSameMember(s.assignedRole, memberName);
+        return isAssigned || isWaitingApprovalForMember;
       })
       .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   };
