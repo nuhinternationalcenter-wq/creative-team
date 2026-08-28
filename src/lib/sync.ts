@@ -1,40 +1,109 @@
-import { db } from './firebase';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { db, auth } from './firebase';
+import { doc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 export const WORKSPACE_DOC_ID = 'main_workspace';
 
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  return errInfo;
+}
+
 let syncTimeout: any;
 
+/**
+ * Immediate document update using updateDoc() as requested by user
+ */
+export const updateFirestoreDoc = async (updates: Record<string, any>) => {
+  const path = `settings/${WORKSPACE_DOC_ID}`;
+  const docRef = doc(db, 'settings', WORKSPACE_DOC_ID);
+  try {
+    await updateDoc(docRef, updates);
+  } catch (e: any) {
+    try {
+      await setDoc(docRef, updates, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, path);
+    }
+  }
+};
+
+/**
+ * Debounced sync for rapid consecutive local updates
+ */
 export const syncToFirestore = (data: any) => {
   if (syncTimeout) clearTimeout(syncTimeout);
   
   syncTimeout = setTimeout(async () => {
+    const path = `settings/${WORKSPACE_DOC_ID}`;
     try {
       await setDoc(doc(db, 'settings', WORKSPACE_DOC_ID), data, { merge: true });
     } catch (e: any) {
       console.error("Error syncing to Firestore", e);
-      if (e.code === 'permission-denied') {
-         console.warn("Permission denied when syncing to Firestore. Check your security rules.");
-      }
+      handleFirestoreError(e, OperationType.WRITE, path);
     }
-  }, 1000);
+  }, 300);
 };
 
+/**
+ * Real-time listener using onSnapshot()
+ */
 export const subscribeToWorkspace = (callback: (data: any | null) => void) => {
+  const path = `settings/${WORKSPACE_DOC_ID}`;
   return onSnapshot(
     doc(db, 'settings', WORKSPACE_DOC_ID), 
     (docSnap) => {
-      if (docSnap.exists() && !docSnap.metadata.hasPendingWrites) {
+      if (docSnap.exists()) {
         callback(docSnap.data());
-      } else if (!docSnap.exists()) {
+      } else {
         callback(null);
       }
     },
     (error: any) => {
       console.error("Firestore Subscribe Error:", error);
-      if (error.code === 'permission-denied') {
-        alert("⚠️ แจ้งเตือน: ฐานข้อมูล Firebase ยังไม่อนุญาตให้เขียน/อ่านข้อมูล\n\nกรุณาไปที่ Firebase Console > Firestore Database > แท็บ Rules แล้วอัปเดตโค้ด Rules เป็น 'allow read, write: if true;' ก่อนครับ");
-      }
+      handleFirestoreError(error, OperationType.GET, path);
     }
   );
 };
+

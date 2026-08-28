@@ -789,7 +789,7 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                         }`}
                         style={{
                           borderLeftWidth: '3.5px',
-                          borderLeftColor: isCompleted ? '#10b981' : isBlocked ? '#f43f5e' : memberHex,
+                          borderLeftColor: isCompleted ? '#10b981' : isBlocked ? '#f43f5e' : (step.color || memberHex),
                         }}
                       >
                         {/* Handover Incoming Badge if this step was handed over from someone */}
@@ -878,9 +878,22 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                           {step.title}
                         </div>
 
-                        {/* Attachments Mini Bar */}
-                        {attachments.length > 0 && (
+                        {/* Attachments Mini Bar & Primary Link */}
+                        {(attachments.length > 0 || step.link) && (
                           <div className="my-1.5 flex items-center flex-wrap gap-1">
+                            {step.link && !attachments.some((a) => a.type === 'link') && (
+                              <span
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openExternalUrl(step.link!, e);
+                                }}
+                                className="inline-flex items-center space-x-1 px-2 py-1 rounded-md bg-blue-50 hover:bg-blue-100 text-xs text-blue-700 font-normal border border-blue-200 transition cursor-pointer"
+                                title="เปิดลิงก์"
+                              >
+                                <LinkIcon className="w-3.5 h-3.5 text-blue-600" />
+                                <span className="truncate max-w-[100px]">{step.link.replace(/^https?:\/\//i, '')}</span>
+                              </span>
+                            )}
                             {attachments.slice(0, 3).map((att) => (
                               <span
                                 key={att.id}

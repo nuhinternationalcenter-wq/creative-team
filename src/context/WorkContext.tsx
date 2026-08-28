@@ -203,18 +203,24 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('workchain_theme_color', color);
   };
 
-  // Firestore real-time sync
+  const isRemoteUpdateRef = React.useRef(false);
+
+  // Firestore real-time sync with onSnapshot
   useEffect(() => {
     import('../lib/sync').then(({ subscribeToWorkspace }) => {
       const unsubscribe = subscribeToWorkspace((data) => {
         setIsFirebaseLoaded(true);
         if (data) {
+          isRemoteUpdateRef.current = true;
           if (data.members) setMembers(data.members);
           if (data.projects) setProjects(data.projects);
           if (data.personalTasks) setPersonalTasks(data.personalTasks);
           if (data.notifications) setNotifications(data.notifications);
           if (data.customLogo !== undefined) setCustomLogoState(data.customLogo);
           if (data.themeColor !== undefined) setThemeColorState(data.themeColor);
+          setTimeout(() => {
+            isRemoteUpdateRef.current = false;
+          }, 150);
         }
       });
       return () => unsubscribe();
@@ -260,7 +266,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Sync to Firestore when local state changes
   useEffect(() => {
-    if (!isFirebaseLoaded) return;
+    if (!isFirebaseLoaded || isRemoteUpdateRef.current) return;
 
     import('../lib/sync').then(({ syncToFirestore }) => {
       syncToFirestore({
@@ -291,9 +297,13 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateMember = (id: string, updates: Partial<TeamMember>) => {
-    setMembers((prev) =>
-      prev.map((m) => (m.id === id || m.name === id ? { ...m, ...updates } : m))
-    );
+    setMembers((prev) => {
+      const updated = prev.map((m) => (m.id === id || m.name === id ? { ...m, ...updates } : m));
+      import('../lib/sync').then(({ updateFirestoreDoc }) => {
+        updateFirestoreDoc({ members: updated });
+      });
+      return updated;
+    });
   };
 
   const deleteMember = (id: string) => {
@@ -622,8 +632,8 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateStepDetails = (projectId: string, stepId: string, updates: Partial<ChainStep>) => {
-    setProjects((prev) =>
-      prev.map((proj) => {
+    setProjects((prev) => {
+      const updatedProjects = prev.map((proj) => {
         const hasStep = proj.steps.some((s) => s.id === stepId);
         if (proj.id !== projectId && !hasStep) return proj;
         return {
@@ -631,8 +641,12 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           steps: proj.steps.map((step) => (step.id === stepId ? { ...step, ...updates } : step)),
           updatedAt: new Date().toISOString(),
         };
-      })
-    );
+      });
+      import('../lib/sync').then(({ updateFirestoreDoc }) => {
+        updateFirestoreDoc({ projects: updatedProjects });
+      });
+      return updatedProjects;
+    });
   };
 
   const addCustomStep = (projectId: string, newStep: Omit<ChainStep, 'id'>) => {
@@ -725,16 +739,20 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updatePersonalTask = (id: string, updates: Partial<PersonalTask>) => {
-    setPersonalTasks((prev) =>
-      prev.map((t) => {
+    setPersonalTasks((prev) => {
+      const updatedTasks = prev.map((t) => {
         if (t.id !== id) return t;
         const updated = { ...t, ...updates };
         if (updates.status === 'completed' && t.status !== 'completed') {
           updated.completedAt = new Date().toISOString();
         }
         return updated;
-      })
-    );
+      });
+      import('../lib/sync').then(({ updateFirestoreDoc }) => {
+        updateFirestoreDoc({ personalTasks: updatedTasks });
+      });
+      return updatedTasks;
+    });
   };
 
   const deletePersonalTask = (id: string) => {

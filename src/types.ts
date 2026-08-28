@@ -52,6 +52,8 @@ export interface ChainStep {
   attachments?: TaskAttachment[];
   workLogs?: WorkLogEntry[];
   estimatedHours?: number;
+  color?: string;
+  link?: string;
 }
 
 export interface TeamChainProject {
@@ -98,6 +100,8 @@ export interface PersonalTask {
   handedOverFrom?: string;
   handoverComment?: string;
   handoverDate?: string;
+  color?: string;
+  link?: string;
 }
 
 export interface NotificationItem {

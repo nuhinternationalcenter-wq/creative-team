@@ -40,6 +40,7 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
   const [notes, setNotes] = useState('');
   const [tagsInput, setTagsInput] = useState('');
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
+  const [cardColor, setCardColor] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -55,6 +56,7 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
       setNotes(task.notes || '');
       setTagsInput((task.tags || []).join(', '));
       setAttachments(task.attachments || []);
+      setCardColor(task.color || '');
       setShowDeleteConfirm(false);
     }
   }, [task, isOpen, members]);
@@ -70,6 +72,8 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
       .map((t) => t.trim())
       .filter((t) => t.length > 0);
 
+    const primaryLink = attachments.find((a) => a.type === 'link')?.url || task.link || '';
+
     updatePersonalTask(task.id, {
       title: title.trim(),
       description: description.trim(),
@@ -82,6 +86,8 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
       notes: notes.trim(),
       tags,
       attachments,
+      link: primaryLink,
+      color: cardColor,
     });
 
     onClose();
@@ -240,6 +246,45 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
               placeholder="เช่น urgent, review, design"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:border-blue-500 outline-none"
             />
+          </div>
+
+          {/* Card Color Picker */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">สีการ์ดงาน (Card Color)</label>
+            <div className="flex items-center space-x-2 flex-wrap gap-y-1.5">
+              {[
+                { label: 'ตามพนักงาน', color: '' },
+                { label: 'ฟ้า', color: '#3b82f6' },
+                { label: 'มรกต', color: '#10b981' },
+                { label: 'ส้ม', color: '#f59e0b' },
+                { label: 'กุหลาบ', color: '#f43f5e' },
+                { label: 'ม่วง', color: '#8b5cf6' },
+                { label: 'คราม', color: '#6366f1' },
+                { label: 'เขียวมิ้นต์', color: '#14b8a6' },
+              ].map((c) => (
+                <button
+                  key={c.color || 'default'}
+                  type="button"
+                  onClick={() => setCardColor(c.color)}
+                  className={`px-2 py-1 rounded-lg text-xs font-medium border flex items-center space-x-1 transition cursor-pointer ${
+                    cardColor === c.color ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/50' : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0 border border-slate-300"
+                    style={{ backgroundColor: c.color || '#94a3b8' }}
+                  />
+                  <span>{c.label}</span>
+                </button>
+              ))}
+              <input
+                type="color"
+                value={cardColor || '#3b82f6'}
+                onChange={(e) => setCardColor(e.target.value)}
+                className="w-6 h-6 rounded-lg border border-slate-300 cursor-pointer p-0 overflow-hidden"
+                title="เลือกสีแบบกำหนดเอง"
+              />
+            </div>
           </div>
 
           {/* Attachments */}

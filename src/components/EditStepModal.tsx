@@ -39,6 +39,7 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
   const [handoverComment, setHandoverComment] = useState('');
   const [estimatedHours, setEstimatedHours] = useState(4);
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
+  const [cardColor, setCardColor] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
       setHandoverComment(step.handoverComment || '');
       setEstimatedHours(step.estimatedHours || 4);
       setAttachments(step.attachments || []);
+      setCardColor(step.color || '');
       setShowDeleteConfirm(false);
     }
   }, [step, isOpen]);
@@ -64,6 +66,7 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
 
     const matchedMember = members.find((m) => m.name.includes(assignedRole) || assignedRole.includes(m.name));
     const assignedPersonName = matchedMember ? matchedMember.name : assignedRole;
+    const primaryLink = attachments.find((a) => a.type === 'link')?.url || step.link || '';
 
     updateStepDetails(activeProject.id, step.id, {
       title: title.trim(),
@@ -76,6 +79,8 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
       handoverComment: handoverComment.trim(),
       estimatedHours,
       attachments,
+      link: primaryLink,
+      color: cardColor,
     });
 
     onClose();
@@ -255,6 +260,45 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
               placeholder="เช่น ส่งต่องานตัดต่อเรียบร้อย แนบไฟล์ในโฟลเดอร์..."
               className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
             />
+          </div>
+
+          {/* Card Color Picker */}
+          <div className="space-y-1 pt-1">
+            <label className="block text-xs font-bold text-slate-700">สีการ์ดงาน (Card Color)</label>
+            <div className="flex items-center space-x-2 flex-wrap gap-y-1.5">
+              {[
+                { label: 'ตามพนักงาน', color: '' },
+                { label: 'ฟ้า', color: '#3b82f6' },
+                { label: 'มรกต', color: '#10b981' },
+                { label: 'ส้ม', color: '#f59e0b' },
+                { label: 'กุหลาบ', color: '#f43f5e' },
+                { label: 'ม่วง', color: '#8b5cf6' },
+                { label: 'คราม', color: '#6366f1' },
+                { label: 'เขียวมิ้นต์', color: '#14b8a6' },
+              ].map((c) => (
+                <button
+                  key={c.color || 'default'}
+                  type="button"
+                  onClick={() => setCardColor(c.color)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium border flex items-center space-x-1.5 transition cursor-pointer ${
+                    cardColor === c.color ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/50' : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0 border border-slate-300"
+                    style={{ backgroundColor: c.color || '#94a3b8' }}
+                  />
+                  <span>{c.label}</span>
+                </button>
+              ))}
+              <input
+                type="color"
+                value={cardColor || '#3b82f6'}
+                onChange={(e) => setCardColor(e.target.value)}
+                className="w-7 h-7 rounded-lg border border-slate-300 cursor-pointer p-0 overflow-hidden"
+                title="เลือกสีแบบกำหนดเอง"
+              />
+            </div>
           </div>
 
           {/* Attachments Section */}
