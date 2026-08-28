@@ -95,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
           if (error.message === 'unauthorized' || error.code === 'storage/unauthorized') {
              alert('⚠️ ไม่สามารถอัปโหลดโลโก้ได้: กรุณาไปที่ Firebase Console > Storage และตั้งค่า Rules เป็น allow read, write: if true;');
           } else {
-             alert('เกิดข้อผิดพลาดในการอัปโหลดโลโก้');
+             alert(`เกิดข้อผิดพลาดในการอัปโหลดโลโก้: ${error.message || 'ไม่ทราบสาเหตุ'}`);
           }
         }
       }

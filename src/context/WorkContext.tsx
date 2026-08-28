@@ -376,6 +376,9 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Cross-tab synchronization via storage event
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
+      // Only process if Firebase is not yet loaded, otherwise onSnapshot handles it
+      if (isFirebaseLoaded) return;
+
       if (e.key === STORAGE_KEY_MEMBERS && e.newValue) {
         try { setMembers(JSON.parse(e.newValue)); } catch {}
       }
@@ -394,7 +397,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [isFirebaseLoaded]);
 
   // Sync to Firestore when local state changes
   useEffect(() => {

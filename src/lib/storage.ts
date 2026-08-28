@@ -19,7 +19,7 @@ export const uploadFileToStorage = (
         console.warn('Upload timed out due to inactivity, canceling uploadTask');
         uploadTask.cancel();
         reject(new Error('timeout'));
-      }, 4000);
+      }, 60000);
 
       uploadTask.on('state_changed', 
         (snapshot) => {
@@ -30,7 +30,7 @@ export const uploadFileToStorage = (
               console.warn('Upload timed out due to inactivity, canceling uploadTask');
               uploadTask.cancel();
               reject(new Error('timeout'));
-            }, 4000);
+            }, 60000);
           }
           if (onProgress) {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
