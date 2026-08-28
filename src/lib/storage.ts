@@ -14,14 +14,31 @@ export const uploadFileToStorage = (
       
       const uploadTask = uploadBytesResumable(storageRef, file);
       
+      let lastBytesTransferred = 0;
+      let timeoutId = setTimeout(() => {
+        console.warn('Upload timed out due to inactivity, canceling uploadTask');
+        uploadTask.cancel();
+        reject(new Error('timeout'));
+      }, 4000);
+
       uploadTask.on('state_changed', 
         (snapshot) => {
+          if (snapshot.bytesTransferred > lastBytesTransferred) {
+            lastBytesTransferred = snapshot.bytesTransferred;
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+              console.warn('Upload timed out due to inactivity, canceling uploadTask');
+              uploadTask.cancel();
+              reject(new Error('timeout'));
+            }, 4000);
+          }
           if (onProgress) {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
             onProgress(Math.round(progress));
           }
         }, 
         (error) => {
+          clearTimeout(timeoutId);
           console.error('Upload failed:', error);
           if (error.code === 'storage/unauthorized') {
             reject(new Error('unauthorized'));
@@ -30,6 +47,7 @@ export const uploadFileToStorage = (
           }
         }, 
         async () => {
+          clearTimeout(timeoutId);
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
           resolve(downloadURL);
         }

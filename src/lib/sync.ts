@@ -12,6 +12,25 @@ export enum OperationType {
   WRITE = 'write',
 }
 
+function removeUndefinedValues(obj: any): any {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeUndefinedValues(item));
+  }
+  const clean: Record<string, any> = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const val = obj[key];
+      if (val !== undefined) {
+        clean[key] = removeUndefinedValues(val);
+      }
+    }
+  }
+  return clean;
+}
+
 export interface FirestoreErrorInfo {
   error: string;
   operationType: OperationType;
@@ -21,6 +40,7 @@ export interface FirestoreErrorInfo {
     email?: string | null;
     emailVerified?: boolean | null;
     isAnonymous?: boolean | null;
+    isAnonymousUser?: boolean | null;
     tenantId?: string | null;
     providerInfo?: {
       providerId?: string | null;
@@ -58,11 +78,12 @@ let syncTimeout: any;
 export const updateFirestoreDoc = async (updates: Record<string, any>) => {
   const path = `settings/${WORKSPACE_DOC_ID}`;
   const docRef = doc(db, 'settings', WORKSPACE_DOC_ID);
+  const cleanUpdates = removeUndefinedValues(updates);
   try {
-    await updateDoc(docRef, updates);
+    await updateDoc(docRef, cleanUpdates);
   } catch (e: any) {
     try {
-      await setDoc(docRef, updates, { merge: true });
+      await setDoc(docRef, cleanUpdates, { merge: true });
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, path);
     }
@@ -75,10 +96,11 @@ export const updateFirestoreDoc = async (updates: Record<string, any>) => {
 export const syncToFirestore = (data: any) => {
   if (syncTimeout) clearTimeout(syncTimeout);
   
+  const cleanData = removeUndefinedValues(data);
   syncTimeout = setTimeout(async () => {
     const path = `settings/${WORKSPACE_DOC_ID}`;
     try {
-      await setDoc(doc(db, 'settings', WORKSPACE_DOC_ID), data, { merge: true });
+      await setDoc(doc(db, 'settings', WORKSPACE_DOC_ID), cleanData, { merge: true });
     } catch (e: any) {
       console.error("Error syncing to Firestore", e);
       handleFirestoreError(e, OperationType.WRITE, path);
