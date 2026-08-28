@@ -197,6 +197,11 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
 
     return project.steps
       .filter((s) => {
+        // EXCLUDE PERSONAL TASKS FROM THE TEAM BOARD VIEW
+        // if (s.taskScope === 'personal') {
+        //   return false;
+        // }
+
         // Filter out completed tasks if hideCompletedOnBoard is enabled
         if (hideCompletedOnBoard && s.status === 'completed') {
           return false;

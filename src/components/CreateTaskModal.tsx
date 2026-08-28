@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   CheckSquare, 
@@ -17,13 +17,22 @@ import { AttachmentManager } from './AttachmentManager';
 interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
+  defaultProjectId?: string;
 }
 
 export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   isOpen,
   onClose,
+  defaultProjectId,
 }) => {
-  const { members, selectedRole, addPersonalTask } = useWork();
+  const { members, selectedRole, addPersonalTask, projects } = useWork();
+  const [projectId, setProjectId] = useState(defaultProjectId || '');
+
+  useEffect(() => {
+    if (defaultProjectId) {
+      setProjectId(defaultProjectId);
+    }
+  }, [defaultProjectId]);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -87,6 +96,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       notes: notes.trim(),
       tags,
       attachments,
+      projectId: projectId || undefined, // Pass projectId
     });
 
     onClose();
@@ -118,6 +128,28 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
           
+          <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-xl text-xs text-indigo-800 font-medium">
+            💡 เลือกโปรเจคหากต้องการให้งานนี้แสดงบนกระดานงานของโปรเจค หรือเว้นว่างไว้เพื่อเป็นงานส่วนตัวอิสระ
+          </div>
+
+          {/* Project Selection */}
+          <div className="space-y-1">
+            <label htmlFor="create-task-project" className="block text-xs font-bold text-slate-700">ผูกกับโปรเจค (ถ้ามี)</label>
+            <select
+              id="create-task-project"
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white outline-none"
+            >
+              <option value="">-- ไม่ผูกกับโปรเจค (งานส่วนตัวอิสระ) --</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title} ({p.code})
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Title */}
           <div className="space-y-1">
             <label className="block text-xs font-bold text-slate-700">

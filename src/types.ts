@@ -104,6 +104,7 @@ export interface ChecklistItem {
 
 export interface PersonalTask {
   id: string;
+  projectId?: string; // Add this
   title: string;
   description?: string;
   category: string; // e.g. "งานด่วน", "การตลาด", "ประสานงาน", "เอกสาร", "ส่วนตัว"

@@ -1047,7 +1047,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (s.id !== stepId) return s;
           return {
             ...s,
-            status: 'completed' as StepStatus,
+            status: 'in_progress' as StepStatus,
             approvalStatus: 'approved' as ApprovalStatus,
             assignedPerson: targetSubmitter || s.assignedPerson,
             assignedRole: targetSubmitter || s.assignedRole,
@@ -1372,7 +1372,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (t.id !== taskId) return t;
           return {
             ...t,
-            status: 'completed' as const,
+            status: 'in_progress' as const,
             completedAt: nowIso,
             handedOverTo: targetAssignee,
             handoverComment: comment,
@@ -1566,7 +1566,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (t.id !== taskId) return t;
         return {
           ...t,
-          status: 'completed' as const,
+          status: 'in_progress' as const,
           approvalStatus: 'approved' as ApprovalStatus,
           assignedTo: submitter || t.assignedTo,
           completedAt: nowIso,

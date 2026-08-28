@@ -31,7 +31,8 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
   defaultRole,
   defaultPerson,
 }) => {
-  const { activeProject, members, addCustomStep, addPersonalTask } = useWork();
+  const { activeProject, projects, members, addCustomStep, addPersonalTask } = useWork();
+  const [selectedProjectId, setSelectedProjectId] = useState(activeProject?.id || '');
 
   const [taskScope, setTaskScope] = useState<'team' | 'personal'>('team');
   const [title, setTitle] = useState('');
@@ -49,6 +50,13 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
   const [estimatedHours, setEstimatedHours] = useState<number>(4);
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
 
+  // Sync selectedProjectId when activeProject changes or initially
+  React.useEffect(() => {
+    if (activeProject) {
+      setSelectedProjectId(activeProject.id);
+    }
+  }, [activeProject]);
+
   // Sync defaultRole if changed
   React.useEffect(() => {
     if (defaultRole) {
@@ -60,10 +68,14 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || !selectedProjectId) return;
+
+    // Find the selected project
+    const targetProject = projects.find(p => p.id === selectedProjectId);
+    if (!targetProject) return;
 
     // Determine next step number
-    const maxStepNum = activeProject.steps.reduce((max, s) => Math.max(max, s.stepNumber), 0);
+    const maxStepNum = targetProject.steps.reduce((max, s) => Math.max(max, s.stepNumber), 0);
     const nextStepNum = maxStepNum + 1;
 
     // Find member to match assignedPerson
@@ -97,10 +109,11 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
       ],
     };
 
-    addCustomStep(activeProject.id, newStepData);
+    addCustomStep(targetProject.id, newStepData);
 
     if (taskScope === 'personal') {
       addPersonalTask({
+        projectId: targetProject.id,
         title: title.trim(),
         description: description.trim() || undefined,
         category: 'งานด่วน/งานโต๊ะ',
@@ -158,6 +171,20 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[82vh] overflow-y-auto">
           
+          {/* Project Selector */}
+          <div className="space-y-1">
+            <label className="block text-xs font-bold text-slate-700">เลือกโปรเจคที่ต้องการเพิ่มงาน:</label>
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white font-semibold outline-none"
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.title}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Task Scope Selector (งานกลุ่ม VS งานส่วนตัว) */}
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-slate-800">

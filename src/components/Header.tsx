@@ -21,7 +21,8 @@ import { useWork } from '../context/WorkContext';
 interface HeaderProps {
   activeTab: 'dashboard' | 'personal' | 'timeline' | 'documents' | 'team_chain';
   setActiveTab: (tab: 'dashboard' | 'personal' | 'timeline' | 'documents' | 'team_chain') => void;
-  onOpenCreateTask: () => void;
+  onOpenCreateTask: () => void; // This will now be explicitly for project tasks, or rename it later. Actually, the user says "อยากปรับแก้จากเมนูนี้" - I will add a new button.
+  onOpenCreatePersonalTask: () => void; 
   onOpenCreateProject: () => void;
   onOpenNotifications: () => void;
   onOpenManageMembers?: () => void;
@@ -31,6 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
   onOpenCreateTask,
+  onOpenCreatePersonalTask,
   onOpenCreateProject,
   onOpenNotifications,
   onOpenManageMembers,
