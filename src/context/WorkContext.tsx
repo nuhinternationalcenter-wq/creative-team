@@ -280,15 +280,13 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('workchain_theme_color', color);
   };
 
-  const isRemoteUpdateRef = React.useRef(false);
-
+  
   // Firestore real-time sync with onSnapshot
   useEffect(() => {
     import('../lib/sync').then(({ subscribeToWorkspace }) => {
-      const unsubscribe = subscribeToWorkspace((data) => {
+      const unsubscribe = subscribeToWorkspace((data, hasPendingWrites) => {
         setIsFirebaseLoaded(true);
-        if (data) {
-          isRemoteUpdateRef.current = true;
+        if (data && !hasPendingWrites) {
           const migrated = migrateAllDataToMrLee({
             members: data.members,
             projects: data.projects,
@@ -304,10 +302,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (migrated.documents) setDocuments(migrated.documents);
           if (data.customLogo !== undefined) setCustomLogoState(data.customLogo);
           if (data.themeColor !== undefined) setThemeColorState(data.themeColor);
-          setTimeout(() => {
-            isRemoteUpdateRef.current = false;
-          }, 1000);
-        }
+                  }
       });
       return () => unsubscribe();
     });
@@ -403,7 +398,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Sync to Firestore when local state changes
   useEffect(() => {
-    if (!isFirebaseLoaded || isRemoteUpdateRef.current) return;
+    if (!isFirebaseLoaded) return;
 
     import('../lib/sync').then(({ syncToFirestore }) => {
       syncToFirestore({

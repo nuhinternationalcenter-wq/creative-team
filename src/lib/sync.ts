@@ -114,21 +114,22 @@ export const syncToFirestore = (data: any) => {
       console.error("Error syncing to Firestore", e);
       handleFirestoreError(e, OperationType.WRITE, path);
     }
-  }, 1000);
+  }, 200);
 };
 
 /**
  * Real-time listener using onSnapshot()
  */
-export const subscribeToWorkspace = (callback: (data: any | null) => void) => {
+export const subscribeToWorkspace = (callback: (data: any | null, hasPendingWrites: boolean) => void) => {
   const path = `settings/${WORKSPACE_DOC_ID}`;
   return onSnapshot(
-    doc(db, 'settings', WORKSPACE_DOC_ID), 
+    doc(db, 'settings', WORKSPACE_DOC_ID),
+    { includeMetadataChanges: true },
     (docSnap) => {
       if (docSnap.exists()) {
-        callback(docSnap.data());
+        callback(docSnap.data(), docSnap.metadata.hasPendingWrites);
       } else {
-        callback(null);
+        callback(null, false);
       }
     },
     (error: any) => {
