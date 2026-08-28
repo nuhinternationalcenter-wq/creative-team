@@ -111,19 +111,10 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
       setUploadProgress(10);
       
       let downloadUrl = '';
-      try {
-        const { uploadFileToStorage } = await import('../lib/storage');
-        downloadUrl = await uploadFileToStorage(file, 'attachments', (progress) => {
-          setUploadProgress(progress);
-        });
-      } catch (storageError) {
-        console.warn('Firebase storage unavailable/failed, using local Data URL fallback:', storageError);
-        setUploadProgress(50);
-        if (type === 'image') {
-          downloadUrl = await compressImage(file);
-        } else {
-          downloadUrl = await readFileAsDataUrl(file);
-        }
+      if (type === 'image') {
+        downloadUrl = await compressImage(file);
+      } else {
+        downloadUrl = await readFileAsDataUrl(file);
       }
       
       const sizeStr = file.size > 1024 * 1024 

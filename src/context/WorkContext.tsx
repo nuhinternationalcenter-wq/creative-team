@@ -887,8 +887,9 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteStep = (projectId: string, stepId: string) => {
-    setProjects((prev) =>
-      prev.map((proj) => {
+    let newProjects: TeamChainProject[] = [];
+    setProjects((prev) => {
+      newProjects = prev.map((proj) => {
         if (proj.id !== projectId) return proj;
         const updatedSteps = proj.steps.filter((s) => s.id !== stepId);
         const completedCount = updatedSteps.filter((s) => s.status === 'completed').length;
@@ -899,8 +900,13 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           progress,
           updatedAt: new Date().toISOString(),
         };
-      })
-    );
+      });
+      return newProjects;
+    });
+
+    import('../lib/sync').then(({ updateFirestoreDoc }) => {
+      updateFirestoreDoc({ projects: newProjects });
+    });
   };
 
   const clearProjectSteps = (projectId: string) => {
@@ -1250,11 +1256,18 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteProject = (id: string) => {
-    setProjects((prev) => prev.filter((p) => p.id !== id));
+    let newProjects: TeamChainProject[] = [];
+    setProjects((prev) => {
+      newProjects = prev.filter((p) => p.id !== id);
+      return newProjects;
+    });
     if (activeProjectId === id) {
-      const remaining = projects.filter((p) => p.id !== id);
+      const remaining = newProjects;
       if (remaining.length > 0) setActiveProjectId(remaining[0].id);
     }
+    import('../lib/sync').then(({ updateFirestoreDoc }) => {
+      updateFirestoreDoc({ projects: newProjects });
+    });
   };
 
   // Personal Tasks CRUD
@@ -1283,7 +1296,14 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deletePersonalTask = (id: string) => {
-    setPersonalTasks((prev) => prev.filter((t) => t.id !== id));
+    let newPersonalTasks: PersonalTask[] = [];
+    setPersonalTasks((prev) => {
+      newPersonalTasks = prev.filter((t) => t.id !== id);
+      return newPersonalTasks;
+    });
+    import('../lib/sync').then(({ updateFirestoreDoc }) => {
+      updateFirestoreDoc({ personalTasks: newPersonalTasks });
+    });
   };
 
   const toggleChecklistItem = (taskId: string, itemId: string) => {
@@ -1717,7 +1737,14 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteDocument = (id: string) => {
-    setDocuments((prev) => prev.filter((d) => d.id !== id));
+    let newDocuments: WorkDocument[] = [];
+    setDocuments((prev) => {
+      newDocuments = prev.filter((d) => d.id !== id);
+      return newDocuments;
+    });
+    import('../lib/sync').then(({ updateFirestoreDoc }) => {
+      updateFirestoreDoc({ documents: newDocuments });
+    });
   };
 
   const markAllNotificationsAsRead = () => {

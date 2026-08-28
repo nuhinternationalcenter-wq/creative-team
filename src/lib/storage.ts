@@ -14,12 +14,19 @@ export const uploadFileToStorage = (
       
       const uploadTask = uploadBytesResumable(storageRef, file);
       
+      // Safety: Force progress start if not triggered immediately
+      setTimeout(() => {
+        if (onProgress && lastBytesTransferred === 0) {
+          onProgress(5);
+        }
+      }, 500);
+
       let lastBytesTransferred = 0;
       let timeoutId = setTimeout(() => {
         console.warn('Upload timed out due to inactivity, canceling uploadTask');
         uploadTask.cancel();
         reject(new Error('timeout'));
-      }, 60000);
+      }, 30000); // Reduced timeout for faster failure/retry
 
       uploadTask.on('state_changed', 
         (snapshot) => {
@@ -30,11 +37,11 @@ export const uploadFileToStorage = (
               console.warn('Upload timed out due to inactivity, canceling uploadTask');
               uploadTask.cancel();
               reject(new Error('timeout'));
-            }, 60000);
+            }, 30000);
           }
           if (onProgress) {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            onProgress(Math.round(progress));
+            onProgress(Math.max(5, Math.round(progress))); // Ensure at least 5% if started
           }
         }, 
         (error) => {
