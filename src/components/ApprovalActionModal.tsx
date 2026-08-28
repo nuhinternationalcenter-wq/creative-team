@@ -64,6 +64,14 @@ export const ApprovalActionModal: React.FC<ApprovalActionModalProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [pasteNotice, setPasteNotice] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      setAction('approve');
+      setComment('');
+      setAttachments([]);
+    }
+  }, [isOpen, effectiveTarget?.item?.id]);
+
   // Current Approver Name
   const approverName = selectedRole === 'all' 
     ? (effectiveTarget?.item?.approverRole || members.find((m) => m.canApprove)?.name || 'Mr Lee') 

@@ -52,12 +52,19 @@ export const SubmitApprovalModal: React.FC<SubmitApprovalModalProps> = ({
   });
 
   const [comment, setComment] = useState('');
-  const [attachments, setAttachments] = useState<TaskAttachment[]>(() => {
-    if (effectiveTarget?.item?.attachments) {
-      return [...effectiveTarget.item.attachments];
+  const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
+
+  // Reset or sync state when modal opens or target changes
+  React.useEffect(() => {
+    if (isOpen && effectiveTarget?.item) {
+      setComment('');
+      if (Array.isArray(effectiveTarget.item.attachments)) {
+        setAttachments([...effectiveTarget.item.attachments]);
+      } else {
+        setAttachments([]);
+      }
     }
-    return [];
-  });
+  }, [isOpen, effectiveTarget?.item?.id]);
 
   // Current submitter name
   const currentSubmitter = selectedRole === 'all' 
