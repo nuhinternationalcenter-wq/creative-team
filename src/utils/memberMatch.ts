@@ -58,48 +58,42 @@ export const isSameMember = (
   }
 
   if (memberId === 'seng' || name.includes('เซ็ง')) {
-    return val.includes('เซ็ง') || val.includes('seng');
+    return val === 'เซ็ง' || val === 'น้องเซ็ง' || val === 'seng';
   }
 
   if (memberId === 'demy' || name.includes('เดะมี่')) {
-    return val.includes('เดะมี่') || val.includes('demy') || (val.includes('มี่') && !val.includes('มีมี่'));
+    return val === 'เดะมี่' || val === 'demy' || val === 'มี่';
   }
 
   if (memberId === 'mimi' || name.includes('มีมี่')) {
-    return val.includes('มีมี่') || val.includes('mimi');
+    return val === 'มีมี่' || val === 'mimi';
   }
 
   if (memberId === 'fani' || name.includes('ฟานี')) {
-    return val.includes('ฟานี') || val.includes('fani');
+    return val === 'ฟานี' || val === 'fani';
   }
 
   if (memberId === 'mkt' || name.includes('mkt') || name.includes('การตลาด')) {
-    return val.includes('mkt') || val.includes('การตลาด');
+    return val === 'mkt' || val === 'การตลาด';
   }
 
   if (memberId === 'po' || name.includes('po') || name.includes('จัดซื้อ') || name.includes('สั่งผลิต')) {
-    return val.includes('po') || val.includes('จัดซื้อ') || val.includes('สั่งผลิต');
+    return val === 'po' || val === 'จัดซื้อ' || val === 'สั่งผลิต';
   }
 
   if (memberId === 'suri' || name.includes('ซูรี')) {
-    return val.includes('ซูรี') || val.includes('suri');
+    return val === 'ซูรี' || val === 'suri';
   }
 
   if (memberId === 'kafah' || name.includes('กะฟา')) {
-    return val.includes('กะฟา') || val.includes('kafah');
+    return val === 'กะฟา' || val === 'kafah';
   }
 
   if (memberId === 'npd' || name.includes('npd')) {
-    return val.includes('npd') || val.includes('product');
+    return val === 'npd' || val === 'product';
   }
 
-  // Fallback check: if one contains the other
-  if (val.length > 2 && name.length > 2) {
-    if (val.includes(name) || name.includes(val)) {
-      return true;
-    }
-  }
-
+  // Fallback check: removed for stricter matching
   return false;
 };
 

@@ -79,6 +79,54 @@ export const Header: React.FC<HeaderProps> = ({
     input.click();
   };
 
+  const readFileAsDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 800;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(event.target?.result as string);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.onerror = () => resolve(event.target?.result as string);
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleLogoUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -91,12 +139,9 @@ export const Header: React.FC<HeaderProps> = ({
           const downloadUrl = await uploadFileToStorage(file, 'logos');
           setCustomLogo(downloadUrl);
         } catch (error: any) {
-          console.error(error);
-          if (error.message === 'unauthorized' || error.code === 'storage/unauthorized') {
-             alert('⚠️ ไม่สามารถอัปโหลดโลโก้ได้: กรุณาไปที่ Firebase Console > Storage และตั้งค่า Rules เป็น allow read, write: if true;');
-          } else {
-             alert(`เกิดข้อผิดพลาดในการอัปโหลดโลโก้: ${error.message || 'ไม่ทราบสาเหตุ'}`);
-          }
+          console.warn('Firebase storage unavailable/failed, using local Data URL fallback:', error);
+          const downloadUrl = await compressImage(file);
+          setCustomLogo(downloadUrl);
         }
       }
     };
