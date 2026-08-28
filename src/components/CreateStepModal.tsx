@@ -31,7 +31,7 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
   defaultRole,
   defaultPerson,
 }) => {
-  const { activeProject, members, addCustomStep } = useWork();
+  const { activeProject, members, addCustomStep, addPersonalTask } = useWork();
 
   const [taskScope, setTaskScope] = useState<'team' | 'personal'>('team');
   const [title, setTitle] = useState('');
@@ -98,6 +98,22 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
     };
 
     addCustomStep(activeProject.id, newStepData);
+
+    if (taskScope === 'personal') {
+      addPersonalTask({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        category: 'งานด่วน/งานโต๊ะ',
+        priority: 'medium',
+        status: status === 'completed' ? 'completed' : status === 'waiting_approval' ? 'waiting_approval' : 'in_progress',
+        assignedTo: assignedPersonName,
+        dueDate,
+        checklist: [],
+        tags: ['จากแดชบอร์ด/ตาราง'],
+        attachments,
+      });
+    }
+
     onClose();
     setTitle('');
     setDescription('');

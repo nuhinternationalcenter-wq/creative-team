@@ -21,10 +21,12 @@ export const RoleFilterBar: React.FC = () => {
       }).length;
     }
     const personalCount = personalTasks.filter((t) => {
+      if (!t) return false;
+      const assigned = t.assignedTo || '';
       const matches = 
-        t.assignedTo === memberName ||
-        (isLeeAlias(memberName) && isLeeAlias(t.assignedTo)) ||
-        isSameMember(t.assignedTo, memberName, memberId);
+        assigned === memberName ||
+        (isLeeAlias(memberName) && isLeeAlias(assigned)) ||
+        isSameMember(assigned, memberName, memberId);
       return matches && t.status !== 'completed';
     }).length;
     return { chainCount, personalCount, total: chainCount + personalCount };

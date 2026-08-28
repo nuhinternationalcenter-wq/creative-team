@@ -13,11 +13,17 @@ import {
   MessageSquare, 
   FileText,
   Edit3,
-  Paperclip
+  Paperclip,
+  ShieldCheck,
+  RotateCcw,
+  Check,
+  Image as ImageIcon
 } from 'lucide-react';
 import { ChainStep, TeamChainProject, StepStatus, TaskAttachment } from '../types';
 import { useWork } from '../context/WorkContext';
 import { AttachmentManager } from './AttachmentManager';
+import { SubmitApprovalModal } from './SubmitApprovalModal';
+import { ApprovalActionModal } from './ApprovalActionModal';
 
 interface StepDetailModalProps {
   step: ChainStep | null;
@@ -39,6 +45,8 @@ export const StepDetailModal: React.FC<StepDetailModalProps> = ({
   const { updateStepStatus, updateStepDetails, addStepLog, members } = useWork();
   const [newLogText, setNewLogText] = useState('');
   const [logMinutes, setLogMinutes] = useState(30);
+  const [isSubmitApprovalOpen, setIsSubmitApprovalOpen] = useState(false);
+  const [isApprovalActionOpen, setIsApprovalActionOpen] = useState(false);
 
   if (!isOpen || !step || !project) return null;
 
@@ -135,6 +143,59 @@ export const StepDetailModal: React.FC<StepDetailModalProps> = ({
               </select>
             </div>
           </div>
+
+          {/* Approval Status & Revision Notice */}
+          {step.status === 'waiting_approval' && (
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-950 space-y-1.5">
+              <div className="font-bold text-amber-900 flex items-center space-x-1.5">
+                <ShieldCheck className="w-4 h-4 text-amber-600" />
+                <span>งานกลุ่มนี้อยู่ระหว่างรอการตรวจ/อนุมัติ</span>
+              </div>
+              <p className="text-amber-800">
+                ส่งขออนุมัติไปยัง: <strong className="font-bold">{step.approverRole || 'หัวหน้า/ผู้เกี่ยวข้อง'}</strong>
+                {step.submittedForApprovalBy && <span> (โดย {step.submittedForApprovalBy})</span>}
+              </p>
+              {step.approvalComment && (
+                <div className="bg-white/80 p-2.5 rounded-lg border border-amber-200 text-slate-700 italic">
+                  "{step.approvalComment}"
+                </div>
+              )}
+            </div>
+          )}
+
+          {step.approvalStatus === 'revision_requested' && (
+            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-950 space-y-2">
+              <div className="font-bold text-rose-900 flex items-center space-x-1.5">
+                <RotateCcw className="w-4 h-4 text-rose-600" />
+                <span>งานถูกส่งกลับให้แก้ไข (จาก {step.approverRole || 'ผู้อนุมัติ'})</span>
+              </div>
+              {step.approvalComment && (
+                <p className="p-2.5 rounded-lg bg-white/80 border border-rose-200 text-rose-950 font-medium">
+                  {step.approvalComment}
+                </p>
+              )}
+              {step.approvalAttachments && step.approvalAttachments.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-[11px] text-rose-800 font-bold block">ไฟล์/ภาพประกอบการแก้ไข:</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {step.approvalAttachments.map((att) => (
+                      <span key={att.id} className="px-2 py-1 rounded bg-white border border-rose-200 text-xs flex items-center space-x-1">
+                        {att.type === 'image' ? <ImageIcon className="w-3.5 h-3.5 text-pink-600" /> : <FileText className="w-3.5 h-3.5 text-rose-600" />}
+                        <span className="truncate max-w-[120px]">{att.name}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step.approvalStatus === 'approved' && (
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex items-center space-x-2">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>งานกลุ่มนี้ได้รับการอนุมัติเรียบร้อยแล้ว</span>
+            </div>
+          )}
 
           {/* Description */}
           {step.description && (
@@ -274,7 +335,7 @@ export const StepDetailModal: React.FC<StepDetailModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center space-x-2">
             <button
               onClick={onClose}
@@ -297,21 +358,73 @@ export const StepDetailModal: React.FC<StepDetailModalProps> = ({
             )}
           </div>
 
-          {step.status !== 'completed' && (
-            <button
-              onClick={() => {
-                onOpenHandover(step);
-                onClose();
-              }}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-md shadow-emerald-600/20 transition"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>ทำเสร็จแล้ว & ส่งต่องาน</span>
-            </button>
-          )}
+          <div className="flex items-center space-x-2">
+            {/* Approval Workflow Buttons */}
+            {step.status === 'waiting_approval' ? (
+              <button
+                type="button"
+                onClick={() => setIsApprovalActionOpen(true)}
+                className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-md shadow-amber-600/20 transition cursor-pointer"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>ตรวจ / อนุมัติงาน</span>
+              </button>
+            ) : step.approvalStatus === 'revision_requested' ? (
+              <button
+                type="button"
+                onClick={() => setIsSubmitApprovalOpen(true)}
+                className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-md shadow-rose-600/20 transition cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+                <span>ส่งขออนุมัติใหม่</span>
+              </button>
+            ) : step.status !== 'completed' ? (
+              <button
+                type="button"
+                onClick={() => setIsSubmitApprovalOpen(true)}
+                className="px-3.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer shadow-2xs"
+              >
+                <ShieldCheck className="w-4 h-4 text-amber-700" />
+                <span>ส่งขออนุมัติ</span>
+              </button>
+            ) : null}
+
+            {step.status !== 'completed' && (
+              <button
+                onClick={() => {
+                  onOpenHandover(step);
+                  onClose();
+                }}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-md shadow-emerald-600/20 transition"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>ทำเสร็จแล้ว & ส่งต่องาน</span>
+              </button>
+            )}
+          </div>
         </div>
 
       </div>
+
+      {/* Submit Approval Modal */}
+      {isSubmitApprovalOpen && (
+        <SubmitApprovalModal
+          isOpen={isSubmitApprovalOpen}
+          onClose={() => setIsSubmitApprovalOpen(false)}
+          step={step}
+          projectId={project.id}
+        />
+      )}
+
+      {/* Approval Action Modal */}
+      {isApprovalActionOpen && (
+        <ApprovalActionModal
+          isOpen={isApprovalActionOpen}
+          onClose={() => setIsApprovalActionOpen(false)}
+          step={step}
+          projectId={project.id}
+        />
+      )}
     </div>
   );
 };

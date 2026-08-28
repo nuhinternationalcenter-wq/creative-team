@@ -18,12 +18,14 @@ import { NotificationDrawer } from './components/NotificationDrawer';
 import { StepDetailModal } from './components/StepDetailModal';
 import { StepHandoverModal } from './components/StepHandoverModal';
 import { WorkDocumentsView } from './components/WorkDocumentsView';
+import { ManageMembersModal } from './components/ManageMembersModal';
 import { ChainStep, TeamChainProject } from './types';
 
 function MainAppContent() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'personal' | 'timeline' | 'documents' | 'team_chain'>('dashboard');
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
+  const [isManageMembersOpen, setIsManageMembersOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState<TeamChainProject | null>(null);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
@@ -31,6 +33,7 @@ function MainAppContent() {
   const [handoverStep, setHandoverStep] = useState<ChainStep | null>(null);
 
   const { activeProject, toast, dismissToast, setSelectedRole } = useWork();
+
 
   // Check URL parameters for navigation hooks
   React.useEffect(() => {
@@ -108,7 +111,9 @@ function MainAppContent() {
         onOpenCreateTask={() => setIsCreateTaskOpen(true)}
         onOpenCreateProject={() => setIsCreateProjectOpen(true)}
         onOpenNotifications={() => setIsNotificationsOpen(true)}
+        onOpenManageMembers={() => setIsManageMembersOpen(true)}
       />
+
 
       {/* Main Viewport */}
       <main className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -171,7 +176,13 @@ function MainAppContent() {
         projectToEdit={projectToEdit}
       />
 
+      <ManageMembersModal
+        isOpen={isManageMembersOpen}
+        onClose={() => setIsManageMembersOpen(false)}
+      />
+
       <NotificationDrawer
+
         isOpen={isNotificationsOpen}
         onClose={() => setIsNotificationsOpen(false)}
         onNavigateToTeamChain={() => setActiveTab('dashboard')}

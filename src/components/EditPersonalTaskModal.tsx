@@ -33,7 +33,7 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('งานประจำวัน');
   const [priority, setPriority] = useState<PriorityLevel>('medium');
-  const [status, setStatus] = useState<'todo' | 'in_progress' | 'completed'>('todo');
+  const [status, setStatus] = useState<'todo' | 'in_progress' | 'waiting_approval' | 'completed'>('todo');
   const [assignedTo, setAssignedTo] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [estimatedMinutes, setEstimatedMinutes] = useState(60);
@@ -41,6 +41,8 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
   const [tagsInput, setTagsInput] = useState('');
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [cardColor, setCardColor] = useState('');
+  const [checklist, setChecklist] = useState<{ id: string; text: string; done: boolean }[]>([]);
+  const [newChecklistText, setNewChecklistText] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -56,12 +58,39 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
       setNotes(task.notes || '');
       setTagsInput((task.tags || []).join(', '));
       setAttachments(task.attachments || []);
+      setChecklist(task.checklist ? [...task.checklist] : []);
       setCardColor(task.color || '');
       setShowDeleteConfirm(false);
+      setNewChecklistText('');
     }
   }, [task, isOpen, members]);
 
   if (!isOpen || !task) return null;
+
+  const handleAddChecklistItem = () => {
+    if (!newChecklistText.trim()) return;
+    setChecklist([
+      ...checklist,
+      {
+        id: `check-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        text: newChecklistText.trim(),
+        done: false,
+      },
+    ]);
+    setNewChecklistText('');
+  };
+
+  const handleRemoveChecklistItem = (id: string) => {
+    setChecklist(checklist.filter((item) => item.id !== id));
+  };
+
+  const handleToggleChecklistItem = (id: string) => {
+    setChecklist(
+      checklist.map((item) =>
+        item.id === id ? { ...item, done: !item.done } : item
+      )
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +114,7 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
       estimatedMinutes: Number(estimatedMinutes) || 0,
       notes: notes.trim(),
       tags,
+      checklist,
       attachments,
       link: primaryLink,
       color: cardColor,
@@ -125,6 +155,45 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
         {/* Body Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
           
+          {/* Revision Banner if revision requested */}
+          {task.approvalStatus === 'revision_requested' && (
+            <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl space-y-2">
+              <div className="flex items-center space-x-2 text-amber-900 font-bold text-xs">
+                <span>🔄</span>
+                <span>ผู้อนุมัติ ({task.approverRole || 'หัวหน้างาน'}) ส่งกลับให้แก้ไข:</span>
+              </div>
+              <p className="text-xs text-amber-950 font-medium whitespace-pre-wrap pl-5">
+                "{task.approvalComment || 'กรุณาตรวจสอบและปรับปรุงรายละเอียดงาน'}"
+              </p>
+              {task.approvalAttachments && task.approvalAttachments.length > 0 && (
+                <div className="pl-5 pt-1 flex flex-wrap gap-2">
+                  {task.approvalAttachments.map((att) => (
+                    <div key={att.id} className="relative group">
+                      {att.type === 'image' ? (
+                        <a href={att.url} target="_blank" rel="noreferrer" className="block">
+                          <img
+                            src={att.url}
+                            alt={att.name}
+                            className="w-16 h-16 object-cover rounded-lg border border-amber-300 shadow-xs hover:scale-105 transition"
+                          />
+                        </a>
+                      ) : (
+                        <a
+                          href={att.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2 py-1 bg-white border border-amber-300 rounded-md text-[11px] text-amber-900 flex items-center space-x-1 hover:bg-amber-100"
+                        >
+                          <span>📎 {att.name}</span>
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Title */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -165,6 +234,7 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
               >
                 <option value="todo">📋 รอดำเนินการ (To Do)</option>
                 <option value="in_progress">⚡ กำลังทำ (In Progress)</option>
+                <option value="waiting_approval">⏳ รออนุมัติ (Waiting Approval)</option>
                 <option value="completed">✅ เสร็จสิ้น (Completed)</option>
               </select>
             </div>
@@ -234,6 +304,82 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:border-blue-500 outline-none"
               />
             </div>
+          </div>
+
+          {/* Checklist Items Management */}
+          <div className="space-y-2 pt-1">
+            <label className="block text-xs font-bold text-slate-700">
+              รายการเช็คลิสต์ย่อย ({checklist.filter((c) => c.done).length}/{checklist.length})
+            </label>
+            
+            {/* List of current items */}
+            {checklist.length > 0 && (
+              <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                {checklist.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border border-slate-200 text-xs"
+                  >
+                    <label className="flex items-center space-x-2 flex-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={item.done}
+                        onChange={() => handleToggleChecklistItem(item.id)}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
+                      />
+                      <span className={`text-slate-800 ${item.done ? 'line-through text-slate-400' : ''}`}>
+                        {item.text}
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveChecklistItem(item.id)}
+                      className="text-slate-400 hover:text-rose-600 p-1 rounded transition"
+                      title="ลบรายการนี้"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add new checklist item input */}
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={newChecklistText}
+                onChange={(e) => setNewChecklistText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddChecklistItem();
+                  }
+                }}
+                placeholder="พิมพ์รายการเช็คลิสต์ แล้วกดเพิ่ม..."
+                className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:border-blue-500 outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleAddChecklistItem}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center space-x-1 transition shrink-0 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>เพิ่ม</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">บันทึกเพิ่มเติม (Notes)</label>
+            <textarea
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="บันทึกช่วยจำหรือลิงก์สำคัญ..."
+              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:border-blue-500 outline-none resize-none"
+            />
           </div>
 
           {/* Tags */}

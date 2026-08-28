@@ -69,13 +69,15 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const projectProgress = totalChainSteps > 0 ? Math.round((completedChainSteps / totalChainSteps) * 100) : (activeProject ? activeProject.progress : 0);
   // Personal Tasks Metrics
   const userPersonalTasks = personalTasks.filter((t) => {
+    if (!t) return false;
     if (selectedRole === 'all') return true;
+    const assigned = t.assignedTo || '';
     return (
-      t.assignedTo === selectedRole ||
-      t.assignedTo.includes(selectedRole) ||
-      selectedRole.includes(t.assignedTo) ||
-      (isLeeAlias(selectedRole) && isLeeAlias(t.assignedTo)) ||
-      isSameMember(t.assignedTo, selectedRole, memberId)
+      assigned === selectedRole ||
+      assigned.includes(selectedRole) ||
+      selectedRole.includes(assigned) ||
+      (isLeeAlias(selectedRole) && isLeeAlias(assigned)) ||
+      isSameMember(assigned, selectedRole, memberId)
     );
   });
   const totalPersonal = userPersonalTasks.length;

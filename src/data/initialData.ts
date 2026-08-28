@@ -1,17 +1,17 @@
 import { TeamMember, TeamChainProject, PersonalTask, NotificationItem } from '../types';
 
 export const INITIAL_MEMBERS: TeamMember[] = [
-  { id: 'mimi', name: 'มีมี่', role: 'Concept & Design Lead', department: 'Design', avatarBg: 'bg-rose-500', color: '#f43f5e' },
-  { id: 'mkt', name: 'MKT (การตลาด)', role: 'Marketing Team', department: 'Marketing', avatarBg: 'bg-blue-500', color: '#3b82f6' },
-  { id: 'npd', name: 'NPD', role: 'New Product Development', department: 'Product', avatarBg: 'bg-amber-500', color: '#f59e0b' },
-  { id: 'po', name: 'PO (จัดซื้อ/สั่งผลิต)', role: 'Procurement & Fabric', department: 'Supply Chain', avatarBg: 'bg-emerald-500', color: '#10b981' },
-  { id: 'suri', name: 'ซูรี', role: 'Product Strategist', department: 'Strategy', avatarBg: 'bg-purple-500', color: '#a855f7' },
-  { id: 'kafah', name: 'กะฟา', role: 'Supplier & Costing', department: 'Operations', avatarBg: 'bg-teal-500', color: '#14b8a6' },
-  { id: 'demy', name: 'เดะมี่', role: 'Photo Shoot Director', department: 'Creative & Media', avatarBg: 'bg-indigo-500', color: '#6366f1' },
-  { id: 'fani', name: 'ฟานี', role: 'Video Content Director', department: 'Creative & Media', avatarBg: 'bg-pink-500', color: '#ec4899' },
-  { id: 'seng', name: 'น้องเซ็ง', role: 'Video Editor (ตัดต่อวิดีโอ)', department: 'Post-Production', avatarBg: 'bg-cyan-500', color: '#06b6d4' },
-  { id: 'lee', name: 'Mr Lee', role: 'Photo Editor & Retouch (ตัดรูป/รีทัช)', department: 'Post-Production', avatarBg: 'bg-violet-500', color: '#8b5cf6' },
-  { id: 'gm', name: 'GM', role: 'General Manager', department: 'Management', avatarBg: 'bg-slate-700', color: '#334155' },
+  { id: 'mimi', name: 'มีมี่', role: 'Concept & Design Lead', department: 'Design', avatarBg: 'bg-rose-500', color: '#f43f5e', canApprove: true, roleLevel: 'approver' },
+  { id: 'mkt', name: 'MKT (การตลาด)', role: 'Marketing Team', department: 'Marketing', avatarBg: 'bg-blue-500', color: '#3b82f6', canApprove: false, roleLevel: 'member' },
+  { id: 'npd', name: 'NPD', role: 'New Product Development', department: 'Product', avatarBg: 'bg-amber-500', color: '#f59e0b', canApprove: true, roleLevel: 'approver' },
+  { id: 'po', name: 'PO (จัดซื้อ/สั่งผลิต)', role: 'Procurement & Fabric', department: 'Supply Chain', avatarBg: 'bg-emerald-500', color: '#10b981', canApprove: false, roleLevel: 'member' },
+  { id: 'suri', name: 'ซูรี', role: 'Product Strategist', department: 'Strategy', avatarBg: 'bg-purple-500', color: '#a855f7', canApprove: false, roleLevel: 'member' },
+  { id: 'kafah', name: 'กะฟา', role: 'Supplier & Costing', department: 'Operations', avatarBg: 'bg-teal-500', color: '#14b8a6', canApprove: false, roleLevel: 'member' },
+  { id: 'demy', name: 'เดะมี่', role: 'Photo Shoot Director', department: 'Creative & Media', avatarBg: 'bg-indigo-500', color: '#6366f1', canApprove: true, roleLevel: 'approver' },
+  { id: 'fani', name: 'ฟานี', role: 'Video Content Director', department: 'Creative & Media', avatarBg: 'bg-pink-500', color: '#ec4899', canApprove: true, roleLevel: 'approver' },
+  { id: 'seng', name: 'น้องเซ็ง', role: 'Video Editor (ตัดต่อวิดีโอ)', department: 'Post-Production', avatarBg: 'bg-cyan-500', color: '#06b6d4', canApprove: false, roleLevel: 'member' },
+  { id: 'lee', name: 'Mr Lee', role: 'Photo Editor & Retouch (ตัดรูป/รีทัช)', department: 'Post-Production', avatarBg: 'bg-violet-500', color: '#8b5cf6', canApprove: true, roleLevel: 'approver' },
+  { id: 'gm', name: 'GM', role: 'General Manager', department: 'Management', avatarBg: 'bg-slate-700', color: '#334155', canApprove: true, roleLevel: 'admin' },
 ];
 
 export const INITIAL_PROJECTS: TeamChainProject[] = [

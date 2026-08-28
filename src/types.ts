@@ -2,6 +2,8 @@ export type TaskType = 'team_chain' | 'personal';
 
 export type StepStatus = 'pending' | 'in_progress' | 'waiting_approval' | 'completed' | 'blocked';
 export type PriorityLevel = 'low' | 'medium' | 'high' | 'urgent';
+export type RoleLevel = 'admin' | 'approver' | 'member';
+export type ApprovalStatus = 'none' | 'pending' | 'approved' | 'rejected' | 'revision_requested';
 
 export interface TeamMember {
   id: string;
@@ -12,6 +14,8 @@ export interface TeamMember {
   color: string;
   gradient?: string;
   avatarUrl?: string;
+  canApprove?: boolean; // มีสิทธิ์อนุมัติงาน
+  roleLevel?: RoleLevel; // ระดับสิทธิ์: admin (ผู้ดูแล), approver (ผู้อนุมัติ), member (พนักงาน)
 }
 
 export interface TaskAttachment {
@@ -29,7 +33,18 @@ export interface WorkLogEntry {
   author: string;
   text: string;
   durationMinutes?: number;
-  type: 'log' | 'handover' | 'status_change' | 'comment';
+  type: 'log' | 'handover' | 'status_change' | 'comment' | 'approval';
+}
+
+export interface ApprovalLogEntry {
+  id: string;
+  timestamp: string;
+  action: 'submit' | 'approve' | 'reject' | 'revision_request';
+  actorName: string;
+  actorRole?: string;
+  targetApprover?: string;
+  comment?: string;
+  attachments?: TaskAttachment[];
 }
 
 export interface ChainStep {
@@ -37,7 +52,7 @@ export interface ChainStep {
   stepNumber: number;
   title: string;
   description?: string;
-  assignedRole: string; // e.g. "มีมี่", "MKT", "NPD", "PO", "เดะมี่", "ฟานี", "น้องเซ็ง", "น้องลี", "ซูรี", "กะฟา", "GM"
+  assignedRole: string; // e.g. "มีมี่", "MKT", "NPD", "PO", "เดะมี่", "ฟานี", "น้องเซ็ง", "Mr Lee", "ซูรี", "กะฟา", "GM"
   assignedPerson: string;
   status: StepStatus;
   startDate?: string;
@@ -54,6 +69,14 @@ export interface ChainStep {
   estimatedHours?: number;
   color?: string;
   link?: string;
+  // Approval System fields
+  approvalStatus?: ApprovalStatus;
+  submittedForApprovalBy?: string;
+  submittedForApprovalAt?: string;
+  approverRole?: string;
+  approvalComment?: string;
+  approvalAttachments?: TaskAttachment[]; // รูปภาพและไฟล์ประกอบการแจ้งแก้ไข/อนุมัติ
+  approvalHistory?: ApprovalLogEntry[];
 }
 
 export interface TeamChainProject {
@@ -102,11 +125,19 @@ export interface PersonalTask {
   handoverDate?: string;
   color?: string;
   link?: string;
+  // Approval System fields
+  approvalStatus?: ApprovalStatus;
+  submittedForApprovalBy?: string;
+  submittedForApprovalAt?: string;
+  approverRole?: string;
+  approvalComment?: string;
+  approvalAttachments?: TaskAttachment[]; // รูปภาพและไฟล์ประกอบการแจ้งแก้ไข/อนุมัติ
+  approvalHistory?: ApprovalLogEntry[];
 }
 
 export interface NotificationItem {
   id: string;
-  type: 'due_soon' | 'overdue' | 'step_unlocked' | 'handover' | 'completed';
+  type: 'due_soon' | 'overdue' | 'step_unlocked' | 'handover' | 'completed' | 'approval_request' | 'approval_approved' | 'approval_rejected' | 'approval_revision';
   title: string;
   message: string;
   timestamp: string;
@@ -115,6 +146,8 @@ export interface NotificationItem {
   relatedStepId?: string;
   relatedTaskId?: string;
   targetRole?: string;
+  senderRole?: string;
+  attachments?: TaskAttachment[];
 }
 
 export interface WorkDocument {

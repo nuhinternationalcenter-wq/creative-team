@@ -12,7 +12,9 @@ import {
   Calendar,
   LayoutDashboard,
   CheckSquare,
-  FileText
+  FileText,
+  ShieldCheck,
+  Users
 } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 
@@ -22,6 +24,7 @@ interface HeaderProps {
   onOpenCreateTask: () => void;
   onOpenCreateProject: () => void;
   onOpenNotifications: () => void;
+  onOpenManageMembers?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -30,7 +33,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCreateTask,
   onOpenCreateProject,
   onOpenNotifications,
+  onOpenManageMembers,
 }) => {
+
   const { 
     members, 
     updateMember,
@@ -204,6 +209,19 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right Action Controls */}
           <div className="flex items-center space-x-2">
+            {/* Manage Roles & Permissions Button */}
+            {onOpenManageMembers && (
+              <button
+                id="header-manage-members-btn"
+                onClick={onOpenManageMembers}
+                className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold border border-indigo-200 transition cursor-pointer flex items-center space-x-1.5 shadow-2xs"
+                title="จัดการสิทธิ์สมาชิก บทบาท และผู้อนุมัติ"
+              >
+                <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                <span className="text-xs">จัดการสิทธิ์ & ทีม</span>
+              </button>
+            )}
+
             {/* Active User Perspective Dropdown */}
             <div className="relative flex items-center">
               <div className="flex items-center bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 transition">
@@ -260,6 +278,25 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="px-4 pb-2 border-b border-slate-100 mb-2">
                     <h3 className="font-bold text-sm text-slate-800">ตั้งค่าระบบ (Settings)</h3>
                   </div>
+
+                  {/* Manage Roles Quick Menu */}
+                  {onOpenManageMembers && (
+                    <div className="px-2 mb-2">
+                      <button
+                        onClick={() => {
+                          onOpenManageMembers();
+                          setShowSettingsMenu(false);
+                        }}
+                        className="w-full text-left px-3 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center space-x-2 transition cursor-pointer font-bold"
+                      >
+                        <ShieldCheck className="w-4.5 h-4.5 text-indigo-600" />
+                        <div>
+                          <div className="text-xs">จัดการสิทธิ์ & บทบาทสมาชิก</div>
+                          <div className="text-[10px] text-indigo-500 font-normal">กำหนดสิทธิ์ Admin / ผู้อนุมัติ / ทีม</div>
+                        </div>
+                      </button>
+                    </div>
+                  )}
 
                   <div className="px-4 py-1.5 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                     ปรับแต่งธีม & โลโก้

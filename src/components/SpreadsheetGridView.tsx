@@ -32,7 +32,8 @@ import {
   Minimize2,
   SlidersHorizontal,
   Search,
-  Flame
+  Flame,
+  ShieldCheck
 } from 'lucide-react';
 import { ChainStep, TeamChainProject, StepStatus, TaskAttachment, TeamMember } from '../types';
 import { useWork } from '../context/WorkContext';
@@ -43,6 +44,8 @@ import { CreateStepModal } from './CreateStepModal';
 import { EditStepModal } from './EditStepModal';
 import { CompletedHistoryModal } from './CompletedHistoryModal';
 import { ManageMembersModal } from './ManageMembersModal';
+import { SubmitApprovalModal } from './SubmitApprovalModal';
+import { ApprovalActionModal } from './ApprovalActionModal';
 
 interface SpreadsheetGridViewProps {
   project: TeamChainProject;
@@ -73,6 +76,8 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
 
   const [createStepRole, setCreateStepRole] = useState<string | null>(null);
   const [editingStep, setEditingStep] = useState<ChainStep | null>(null);
+  const [submitApprovalStep, setSubmitApprovalStep] = useState<ChainStep | null>(null);
+  const [approvalActionStep, setApprovalActionStep] = useState<ChainStep | null>(null);
   const [showCompletedHistory, setShowCompletedHistory] = useState(false);
   const [showManageMembers, setShowManageMembers] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -307,12 +312,12 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
   const getColumnMinWidth = () => {
     switch (widthMode) {
       case 'ultra-compact':
-        return 175;
+        return 200;
       case 'compact':
-        return 210;
+        return 240;
       case 'comfortable':
       default:
-        return 255;
+        return 280;
     }
   };
 
@@ -811,8 +816,8 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                         )}
 
                         {/* Top Row: Badges & Quick Action */}
-                        <div className="flex items-center justify-between mb-1.5 gap-1">
-                          <div className="flex items-center space-x-1">
+                        <div className="flex items-center justify-between mb-1.5 gap-1 flex-wrap">
+                          <div className="flex items-center gap-1 flex-wrap">
                             <span
                               className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
                               style={{
@@ -826,13 +831,13 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
 
                             {/* Team vs Personal Badge */}
                             {isPersonal ? (
-                              <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-medium flex items-center space-x-0.5">
+                              <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-medium flex items-center space-x-0.5 shrink-0">
                                 <User className="w-3 h-3" />
                                 <span>ส่วนตัว</span>
                               </span>
                             ) : (
                               <span 
-                                className="px-2 py-0.5 rounded text-[11px] font-medium flex items-center space-x-0.5 border"
+                                className="px-2 py-0.5 rounded text-[11px] font-medium flex items-center space-x-0.5 border shrink-0"
                                 style={{
                                   backgroundColor: `${memberHex}15`,
                                   borderColor: `${memberHex}30`,
@@ -843,9 +848,27 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                                 <span>งานกลุ่ม</span>
                               </span>
                             )}
+
+                            {/* Approval Status Badge */}
+                            {step.status === 'waiting_approval' ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center space-x-1 shrink-0">
+                                <ShieldCheck className="w-3 h-3 text-amber-600" />
+                                <span>รออนุมัติ</span>
+                              </span>
+                            ) : step.approvalStatus === 'revision_requested' ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center space-x-1 shrink-0">
+                                <RotateCcw className="w-3 h-3 text-rose-600" />
+                                <span>ส่งกลับแก้ไข</span>
+                              </span>
+                            ) : step.approvalStatus === 'approved' ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center space-x-1 shrink-0">
+                                <Check className="w-3 h-3 text-emerald-600" />
+                                <span>ผ่านอนุมัติ</span>
+                              </span>
+                            ) : null}
                           </div>
 
-                          <div className="flex items-center space-x-1">
+                          <div className="flex items-center space-x-1 shrink-0">
                             {getStatusBadge(step.status)}
 
                             {/* Quick restore button if completed/blocked/waiting */}
@@ -936,6 +959,36 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                           </div>
                         )}
 
+                        {/* Revision feedback note & attachments if revision requested */}
+                        {step.approvalStatus === 'revision_requested' && step.approvalComment && (
+                          <div className="my-1.5 p-2 rounded-lg border border-rose-200 bg-rose-50/90 text-xs leading-relaxed text-rose-900 space-y-1">
+                            <div className="font-bold flex items-center space-x-1 text-rose-700">
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>สิ่งที่ต้องแก้ไข (จาก {step.approverRole || 'ผู้อนุมัติ'}):</span>
+                            </div>
+                            <p className="break-words font-medium">{step.approvalComment}</p>
+                            {step.approvalAttachments && step.approvalAttachments.length > 0 && (
+                              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                                {step.approvalAttachments.map((att) => (
+                                  <button
+                                    key={att.id}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (att.type === 'image') setPreviewImage(att.url);
+                                      else if (att.type === 'link') openExternalUrl(att.url, e);
+                                    }}
+                                    className="px-2 py-0.5 bg-white rounded border border-rose-200 text-[10px] text-rose-800 font-medium flex items-center space-x-1 hover:bg-rose-100 cursor-pointer"
+                                  >
+                                    {att.type === 'image' ? <ImageIcon className="w-3 h-3 text-pink-600" /> : <FileText className="w-3 h-3 text-rose-600" />}
+                                    <span className="truncate max-w-[100px]">{att.name}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {/* Handover notes / instructions received or given */}
                         {step.handoverComment && (
                           <div className="my-1.5 p-2 rounded-lg border border-slate-200/90 bg-slate-50 text-sm leading-relaxed flex items-start space-x-1.5 text-slate-700">
@@ -950,12 +1003,71 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                         )}
 
                         {/* Due Date & Action Buttons Footer */}
-                        <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-xs gap-1 flex-wrap">
-                          <div className="shrink-0">
-                            {checkDueStatus(step.dueDate, isCompleted)}
+                        <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-col gap-1.5 text-xs">
+                          <div className="flex items-center justify-between gap-1 w-full flex-wrap">
+                            <div className="shrink-0 text-slate-500">
+                              {checkDueStatus(step.dueDate, isCompleted)}
+                            </div>
+
+                            {/* Start button if pending */}
+                            {step.status === 'pending' && !isPersonal && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateStepStatus(project.id, step.id, 'in_progress', undefined, `เริ่มงานสเต็ป ${step.stepNumber}`);
+                                }}
+                                className="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium flex items-center space-x-0.5 border border-slate-200 transition cursor-pointer"
+                              >
+                                <span>เริ่มงาน</span>
+                              </button>
+                            )}
                           </div>
 
-                          <div className="flex items-center space-x-1 shrink-0">
+                          {/* Action Buttons Row: Compact & Non-overflowing */}
+                          <div className="flex items-center justify-end gap-1.5 w-full flex-wrap">
+                            {/* APPROVAL WORKFLOW BUTTONS */}
+                            {step.status === 'waiting_approval' ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setApprovalActionStep(step);
+                                }}
+                                className="px-2 py-1 rounded-md text-white text-xs font-semibold bg-amber-600 hover:bg-amber-500 flex items-center space-x-1 shadow-2xs transition cursor-pointer"
+                                title="เปิดหน้าต่างตรวจสอบและอนุมัติงานนี้"
+                              >
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                <span>ตรวจ/อนุมัติ</span>
+                              </button>
+                            ) : step.approvalStatus === 'revision_requested' ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSubmitApprovalStep(step);
+                                }}
+                                className="px-2 py-1 rounded-md text-white text-xs font-semibold bg-rose-600 hover:bg-rose-500 flex items-center space-x-1 shadow-2xs transition cursor-pointer"
+                                title="ส่งงานขออนุมัติใหม่หลังแก้ไขแล้ว"
+                              >
+                                <Send className="w-3.5 h-3.5" />
+                                <span>ส่งอนุมัติใหม่</span>
+                              </button>
+                            ) : !isCompleted ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSubmitApprovalStep(step);
+                                }}
+                                className="px-2 py-1 rounded-md text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-xs font-medium flex items-center space-x-1 transition cursor-pointer shadow-2xs"
+                                title="ส่งเรื่องขออนุมัติงานนี้ต่อหัวหน้า/ผู้อนุมัติ"
+                              >
+                                <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
+                                <span>ส่งอนุมัติ</span>
+                              </button>
+                            ) : null}
+
                             {/* Team task: Handover button */}
                             {!isPersonal ? (
                               <button
@@ -964,18 +1076,18 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                                   e.stopPropagation();
                                   onOpenHandover(step);
                                 }}
-                                className="px-3 py-1.5 rounded-lg text-white text-xs font-medium flex items-center space-x-1 shadow-2xs transition cursor-pointer hover:opacity-90 active:scale-95"
+                                className="px-2.5 py-1 rounded-md text-white text-xs font-medium flex items-center space-x-1 shadow-2xs transition cursor-pointer hover:opacity-90 active:scale-95"
                                 style={{
                                   backgroundColor: memberHex,
                                 }}
                                 title="ทำงานเสร็จแล้ว ส่งต่องานให้เพื่อนร่วมทีม"
                               >
                                 <span>ส่งต่อ</span>
-                                <Send className="w-3.5 h-3.5" />
+                                <Send className="w-3 h-3" />
                               </button>
                             ) : (
-                              /* Personal task: Mark done or Handover */
-                              <div className="flex items-center space-x-1">
+                              /* Personal task: Mark done and Handover */
+                              <div className="flex items-center gap-1.5">
                                 {!isCompleted && (
                                   <button
                                     type="button"
@@ -983,10 +1095,10 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                                       e.stopPropagation();
                                       updateStepStatus(project.id, step.id, 'completed', undefined, `ทำงานส่วนตัวเสร็จสิ้น`);
                                     }}
-                                    className="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-medium flex items-center space-x-0.5 border border-emerald-200 transition cursor-pointer"
+                                    className="px-2 py-1 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-medium flex items-center space-x-0.5 border border-emerald-200 transition cursor-pointer"
                                     title="ติ๊กเสร็จงานส่วนตัว (จะย้ายเข้าสู่ประวัติที่เสร็จสิ้น)"
                                   >
-                                    <Check className="w-3.5 h-3.5" />
+                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
                                     <span>เสร็จแล้ว</span>
                                   </button>
                                 )}
@@ -997,27 +1109,13 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                                     e.stopPropagation();
                                     onOpenHandover(step);
                                   }}
-                                  className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium flex items-center space-x-0.5 border border-slate-200 transition cursor-pointer"
+                                  className="px-2 py-1 rounded-md bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium flex items-center space-x-0.5 border border-slate-200 transition cursor-pointer"
                                   title="ส่งต่องานนี้ให้คนอื่น"
                                 >
                                   <span>ส่งต่อ</span>
-                                  <Send className="w-3.5 h-3.5" />
+                                  <Send className="w-3 h-3" />
                                 </button>
                               </div>
-                            )}
-
-                            {/* Start button if pending */}
-                            {step.status === 'pending' && !isPersonal && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updateStepStatus(project.id, step.id, 'in_progress', undefined, `เริ่มงานสเต็ป ${step.stepNumber}`);
-                                }}
-                                className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-medium flex items-center space-x-0.5 border border-slate-200 transition cursor-pointer"
-                              >
-                                <span>เริ่ม</span>
-                              </button>
                             )}
                           </div>
                         </div>
@@ -1083,6 +1181,26 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
         isOpen={showManageMembers}
         onClose={() => setShowManageMembers(false)}
       />
+
+      {/* Submit Approval Modal for Group / Step Tasks */}
+      {submitApprovalStep && (
+        <SubmitApprovalModal
+          isOpen={!!submitApprovalStep}
+          onClose={() => setSubmitApprovalStep(null)}
+          step={submitApprovalStep}
+          projectId={project.id}
+        />
+      )}
+
+      {/* Approval Review / Action Modal for Group / Step Tasks */}
+      {approvalActionStep && (
+        <ApprovalActionModal
+          isOpen={!!approvalActionStep}
+          onClose={() => setApprovalActionStep(null)}
+          step={approvalActionStep}
+          projectId={project.id}
+        />
+      )}
 
       {/* Image Lightbox */}
       {previewImage && (

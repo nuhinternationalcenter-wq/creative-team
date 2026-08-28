@@ -129,25 +129,27 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
 
     // 2. Personal tasks
     personalTasks.forEach((t) => {
+      if (!t) return;
+      const assigned = t.assignedTo || '';
       const matchesType = filterType === 'all' || filterType === 'personal';
       const matchesGlobalRole = selectedRole === 'all' || 
-        t.assignedTo === selectedRole ||
-        t.assignedTo.includes(selectedRole) ||
-        selectedRole.includes(t.assignedTo) ||
-        (isLeeAlias(selectedRole) && isLeeAlias(t.assignedTo)) ||
-        isSameMember(t.assignedTo, selectedRole, memberId);
+        assigned === selectedRole ||
+        assigned.includes(selectedRole) ||
+        selectedRole.includes(assigned) ||
+        (isLeeAlias(selectedRole) && isLeeAlias(assigned)) ||
+        isSameMember(assigned, selectedRole, memberId);
 
       const matchesMember = filterMember === 'all' || 
-        t.assignedTo === filterMember ||
-        (isLeeAlias(filterMember) && isLeeAlias(t.assignedTo)) ||
-        isSameMember(t.assignedTo, filterMember);
+        assigned === filterMember ||
+        (isLeeAlias(filterMember) && isLeeAlias(assigned)) ||
+        isSameMember(assigned, filterMember);
 
       if (matchesType && matchesGlobalRole && matchesMember) {
         list.push({
           id: t.id,
           type: 'personal_task',
-          title: t.title,
-          assignedTo: t.assignedTo,
+          title: t.title || 'ไม่มีชื่อหัวข้อ',
+          assignedTo: assigned,
           dueDate: t.dueDate,
           status: t.status,
           isCompleted: t.status === 'completed',

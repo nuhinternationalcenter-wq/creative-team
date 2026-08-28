@@ -8,7 +8,10 @@ import {
   ChainStep, 
   StepStatus,
   WorkLogEntry,
-  WorkDocument
+  WorkDocument,
+  ApprovalStatus,
+  ApprovalLogEntry,
+  TaskAttachment
 } from '../types';
 import { 
   INITIAL_MEMBERS, 
@@ -62,6 +65,25 @@ interface WorkContextType {
   deleteStep: (projectId: string, stepId: string) => void;
   clearProjectSteps: (projectId: string) => void;
 
+  // Step Approval operations
+  submitStepForApproval: (
+    projectId: string,
+    stepId: string,
+    approverRole: string,
+    submitterRole: string,
+    comment?: string,
+    attachments?: any[]
+  ) => void;
+  approveStep: (projectId: string, stepId: string, approverName: string, comment?: string) => void;
+  rejectStep: (projectId: string, stepId: string, approverName: string, comment: string) => void;
+  requestStepRevision: (
+    projectId: string,
+    stepId: string,
+    approverName: string,
+    revisionComment: string,
+    attachments?: any[]
+  ) => void;
+
   // Project operations
   createProject: (project: Omit<TeamChainProject, 'id' | 'createdAt' | 'updatedAt' | 'progress'>) => void;
   updateProject: (id: string, updates: Partial<TeamChainProject>) => void;
@@ -80,6 +102,23 @@ interface WorkContextType {
     actionType: 'delegate' | 'complete_and_assign_next',
     newDueDate?: string,
     newTitle?: string
+  ) => void;
+
+  // Personal Task Approval operations
+  submitPersonalTaskForApproval: (
+    taskId: string,
+    approverRole: string,
+    submitterRole: string,
+    comment?: string,
+    attachments?: any[]
+  ) => void;
+  approvePersonalTask: (taskId: string, approverName: string, comment?: string) => void;
+  rejectPersonalTask: (taskId: string, approverName: string, comment: string) => void;
+  requestPersonalTaskRevision: (
+    taskId: string,
+    approverName: string,
+    revisionComment: string,
+    attachments?: any[]
   ) => void;
 
   // Notifications
@@ -843,6 +882,311 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
+  // Step Approval Handlers
+  const submitStepForApproval = (
+    projectId: string,
+    stepId: string,
+    approverRole: string,
+    submitterRole: string,
+    comment?: string,
+    attachments?: any[]
+  ) => {
+    const nowIso = new Date().toISOString();
+    let stepTitle = '';
+
+    setProjects((prev) =>
+      prev.map((proj) => {
+        if (proj.id !== projectId) return proj;
+        const targetStep = proj.steps.find((s) => s.id === stepId);
+        if (!targetStep) return proj;
+        stepTitle = targetStep.title;
+
+        const newLog: WorkLogEntry = {
+          id: `log-${Date.now()}`,
+          timestamp: nowIso,
+          author: submitterRole,
+          text: `ส่งขออนุมัติงานไปยังคุณ ${approverRole}${comment ? `: "${comment}"` : ''}`,
+          type: 'approval',
+        };
+
+        const approvalLog: ApprovalLogEntry = {
+          id: `appr-${Date.now()}`,
+          timestamp: nowIso,
+          action: 'submit',
+          actorName: submitterRole,
+          actorRole: submitterRole,
+          targetApprover: approverRole,
+          comment,
+          attachments,
+        };
+
+        const updatedSteps = proj.steps.map((s) => {
+          if (s.id !== stepId) return s;
+          return {
+            ...s,
+            status: 'waiting_approval' as StepStatus,
+            approvalStatus: 'pending' as ApprovalStatus,
+            submittedForApprovalBy: submitterRole,
+            submittedForApprovalAt: nowIso,
+            approverRole,
+            approvalComment: comment || s.approvalComment,
+            approvalAttachments: attachments || s.approvalAttachments,
+            workLogs: [...(s.workLogs || []), newLog],
+            approvalHistory: [...(s.approvalHistory || []), approvalLog],
+          };
+        });
+
+        return {
+          ...proj,
+          steps: updatedSteps,
+          updatedAt: nowIso,
+        };
+      })
+    );
+
+    // Send in-app notification to the approver
+    addNotification({
+      type: 'approval_request',
+      title: `🔔 มีงานรอการอนุมัติจาก ${submitterRole}`,
+      message: `งาน "${stepTitle || 'ขั้นตอนในสายงาน'}" ส่งมาให้คุณอนุมัติ ${comment ? `ข้อความ: "${comment}"` : ''}`,
+      relatedProjectId: projectId,
+      relatedStepId: stepId,
+      targetRole: approverRole,
+      senderRole: submitterRole,
+    });
+
+    showToastNotification(
+      approverRole,
+      stepTitle || 'ส่งขออนุมัติสำเร็จ',
+      `ส่งงานให้คุณ ${approverRole} ตรวจสอบและอนุมัติแล้ว!`
+    );
+  };
+
+  const approveStep = (projectId: string, stepId: string, approverName: string, comment?: string) => {
+    try {
+      confetti({
+        particleCount: 60,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    } catch {}
+
+    const nowIso = new Date().toISOString();
+    let stepTitle = '';
+    let targetSubmitter = '';
+
+    setProjects((prev) =>
+      prev.map((proj) => {
+        if (proj.id !== projectId) return proj;
+        const targetStep = proj.steps.find((s) => s.id === stepId);
+        if (!targetStep) return proj;
+        stepTitle = targetStep.title;
+        targetSubmitter = targetStep.submittedForApprovalBy || targetStep.assignedPerson || targetStep.assignedRole;
+
+        const newLog: WorkLogEntry = {
+          id: `log-${Date.now()}`,
+          timestamp: nowIso,
+          author: approverName,
+          text: `✅ อนุมัติงานเรียบร้อยแล้ว: "${comment || 'ผ่านการตรวจ'}"`,
+          type: 'approval',
+        };
+
+        const approvalLog: ApprovalLogEntry = {
+          id: `appr-${Date.now()}`,
+          timestamp: nowIso,
+          action: 'approve',
+          actorName: approverName,
+          actorRole: approverName,
+          comment: comment || 'อนุมัติเรียบร้อยแล้ว',
+        };
+
+        const updatedSteps = proj.steps.map((s) => {
+          if (s.id !== stepId) return s;
+          return {
+            ...s,
+            status: 'completed' as StepStatus,
+            approvalStatus: 'approved' as ApprovalStatus,
+            completedAt: nowIso,
+            approvalComment: comment || s.approvalComment,
+            workLogs: [...(s.workLogs || []), newLog],
+            approvalHistory: [...(s.approvalHistory || []), approvalLog],
+          };
+        });
+
+        const completedCount = updatedSteps.filter((s) => s.status === 'completed').length;
+        const progress = Math.round((completedCount / updatedSteps.length) * 100);
+
+        return {
+          ...proj,
+          steps: updatedSteps,
+          progress,
+          updatedAt: nowIso,
+        };
+      })
+    );
+
+    // Notify submitter
+    addNotification({
+      type: 'approval_approved',
+      title: `✅ งานของคุณผ่านการอนุมัติแล้ว!`,
+      message: `งาน "${stepTitle}" ได้รับการอนุมัติโดยคุณ ${approverName} ${comment ? `("${comment}")` : ''}`,
+      relatedProjectId: projectId,
+      relatedStepId: stepId,
+      targetRole: targetSubmitter,
+      senderRole: approverName,
+    });
+
+    showToastNotification(
+      targetSubmitter,
+      stepTitle,
+      `งานผ่านการอนุมัติโดยคุณ ${approverName} เรียบร้อยแล้ว!`
+    );
+  };
+
+  const rejectStep = (projectId: string, stepId: string, approverName: string, comment: string) => {
+    const nowIso = new Date().toISOString();
+    let stepTitle = '';
+    let targetSubmitter = '';
+
+    setProjects((prev) =>
+      prev.map((proj) => {
+        if (proj.id !== projectId) return proj;
+        const targetStep = proj.steps.find((s) => s.id === stepId);
+        if (!targetStep) return proj;
+        stepTitle = targetStep.title;
+        targetSubmitter = targetStep.submittedForApprovalBy || targetStep.assignedPerson || targetStep.assignedRole;
+
+        const newLog: WorkLogEntry = {
+          id: `log-${Date.now()}`,
+          timestamp: nowIso,
+          author: approverName,
+          text: `❌ ปฏิเสธ/ยกเลิกคำขออนุมัติ: "${comment}"`,
+          type: 'approval',
+        };
+
+        const approvalLog: ApprovalLogEntry = {
+          id: `appr-${Date.now()}`,
+          timestamp: nowIso,
+          action: 'reject',
+          actorName: approverName,
+          actorRole: approverName,
+          comment,
+        };
+
+        const updatedSteps = proj.steps.map((s) => {
+          if (s.id !== stepId) return s;
+          return {
+            ...s,
+            status: 'in_progress' as StepStatus,
+            approvalStatus: 'rejected' as ApprovalStatus,
+            approvalComment: comment,
+            workLogs: [...(s.workLogs || []), newLog],
+            approvalHistory: [...(s.approvalHistory || []), approvalLog],
+          };
+        });
+
+        return {
+          ...proj,
+          steps: updatedSteps,
+          updatedAt: nowIso,
+        };
+      })
+    );
+
+    // Notify submitter
+    addNotification({
+      type: 'approval_rejected',
+      title: `❌ งานไม่ผ่านการอนุมัติ / ถูกยกเลิก`,
+      message: `งาน "${stepTitle}" ถูกปฏิเสธโดยคุณ ${approverName} เหตุผล: "${comment}"`,
+      relatedProjectId: projectId,
+      relatedStepId: stepId,
+      targetRole: targetSubmitter,
+      senderRole: approverName,
+    });
+
+    showToastNotification(
+      targetSubmitter,
+      stepTitle,
+      `ผลการตรวจ: ไม่อนุมัติ/ยกเลิก โดยคุณ ${approverName}`
+    );
+  };
+
+  const requestStepRevision = (
+    projectId: string,
+    stepId: string,
+    approverName: string,
+    revisionComment: string,
+    attachments?: any[]
+  ) => {
+    const nowIso = new Date().toISOString();
+    let stepTitle = '';
+    let targetSubmitter = '';
+
+    setProjects((prev) =>
+      prev.map((proj) => {
+        if (proj.id !== projectId) return proj;
+        const targetStep = proj.steps.find((s) => s.id === stepId);
+        if (!targetStep) return proj;
+        stepTitle = targetStep.title;
+        targetSubmitter = targetStep.submittedForApprovalBy || targetStep.assignedPerson || targetStep.assignedRole;
+
+        const newLog: WorkLogEntry = {
+          id: `log-${Date.now()}`,
+          timestamp: nowIso,
+          author: approverName,
+          text: `🔄 ส่งกลับให้แก้ไข: "${revisionComment}"${attachments?.length ? ` (แนบรูป ${attachments.length} รูป)` : ''}`,
+          type: 'approval',
+        };
+
+        const approvalLog: ApprovalLogEntry = {
+          id: `appr-${Date.now()}`,
+          timestamp: nowIso,
+          action: 'revision_request',
+          actorName: approverName,
+          actorRole: approverName,
+          comment: revisionComment,
+          attachments,
+        };
+
+        const updatedSteps = proj.steps.map((s) => {
+          if (s.id !== stepId) return s;
+          return {
+            ...s,
+            status: 'in_progress' as StepStatus,
+            approvalStatus: 'revision_requested' as ApprovalStatus,
+            approvalComment: revisionComment,
+            approvalAttachments: attachments || s.approvalAttachments,
+            workLogs: [...(s.workLogs || []), newLog],
+            approvalHistory: [...(s.approvalHistory || []), approvalLog],
+          };
+        });
+
+        return {
+          ...proj,
+          steps: updatedSteps,
+          updatedAt: nowIso,
+        };
+      })
+    );
+
+    // Notify submitter
+    addNotification({
+      type: 'approval_revision',
+      title: `🔄 งานของคุณถูกส่งกลับให้แก้ไข`,
+      message: `งาน "${stepTitle}" ส่งกลับจากคุณ ${approverName}: "${revisionComment}" (มีรูปแนบรายละเอียด)`,
+      relatedProjectId: projectId,
+      relatedStepId: stepId,
+      targetRole: targetSubmitter,
+      senderRole: approverName,
+    });
+
+    showToastNotification(
+      targetSubmitter,
+      stepTitle,
+      `งานถูกส่งกลับให้แก้ไขโดยคุณ ${approverName}`
+    );
+  };
+
   // Project CRUD
   const createProject = (projectData: Omit<TeamChainProject, 'id' | 'createdAt' | 'updatedAt' | 'progress'>) => {
     const newProj: TeamChainProject = {
@@ -1056,6 +1400,250 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
+  // Personal Task Approval Handlers
+  const submitPersonalTaskForApproval = (
+    taskId: string,
+    approverRole: string,
+    submitterRole: string,
+    comment?: string,
+    attachments?: any[]
+  ) => {
+    const nowIso = new Date().toISOString();
+    const target = personalTasks.find((t) => t.id === taskId);
+    const taskTitle = target?.title || 'งานส่วนตัว';
+
+    const newLog: WorkLogEntry = {
+      id: `log-${Date.now()}`,
+      timestamp: nowIso,
+      author: submitterRole,
+      text: `ส่งขออนุมัติงานไปยังคุณ ${approverRole}${comment ? `: "${comment}"` : ''}`,
+      type: 'approval',
+    };
+
+    const approvalLog: ApprovalLogEntry = {
+      id: `appr-${Date.now()}`,
+      timestamp: nowIso,
+      action: 'submit',
+      actorName: submitterRole,
+      actorRole: submitterRole,
+      targetApprover: approverRole,
+      comment,
+      attachments,
+    };
+
+    setPersonalTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== taskId) return t;
+        return {
+          ...t,
+          status: 'waiting_approval' as const,
+          approvalStatus: 'pending' as ApprovalStatus,
+          submittedForApprovalBy: submitterRole,
+          submittedForApprovalAt: nowIso,
+          approverRole,
+          approvalComment: comment || t.approvalComment,
+          approvalAttachments: attachments || t.approvalAttachments,
+          workLogs: [...(t.workLogs || []), newLog],
+          approvalHistory: [...(t.approvalHistory || []), approvalLog],
+        };
+      })
+    );
+
+    // In-app notification to approver
+    addNotification({
+      type: 'approval_request',
+      title: `🔔 มีงานส่วนตัวรอการอนุมัติจาก ${submitterRole}`,
+      message: `งาน "${taskTitle}" ส่งมาให้คุณอนุมัติ ${comment ? `ข้อความ: "${comment}"` : ''}`,
+      relatedTaskId: taskId,
+      targetRole: approverRole,
+      senderRole: submitterRole,
+    });
+
+    showToastNotification(
+      approverRole,
+      taskTitle,
+      `ส่งงานให้คุณ ${approverRole} ตรวจสอบและอนุมัติแล้ว!`
+    );
+  };
+
+  const approvePersonalTask = (taskId: string, approverName: string, comment?: string) => {
+    try {
+      confetti({
+        particleCount: 60,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    } catch {}
+
+    const nowIso = new Date().toISOString();
+    const target = personalTasks.find((t) => t.id === taskId);
+    const taskTitle = target?.title || 'งานส่วนตัว';
+    const submitter = target?.submittedForApprovalBy || target?.assignedTo || approverName;
+
+    const newLog: WorkLogEntry = {
+      id: `log-${Date.now()}`,
+      timestamp: nowIso,
+      author: approverName,
+      text: `✅ อนุมัติงานเรียบร้อยแล้ว: "${comment || 'ผ่านการตรวจ'}"`,
+      type: 'approval',
+    };
+
+    const approvalLog: ApprovalLogEntry = {
+      id: `appr-${Date.now()}`,
+      timestamp: nowIso,
+      action: 'approve',
+      actorName: approverName,
+      actorRole: approverName,
+      comment: comment || 'อนุมัติเรียบร้อยแล้ว',
+    };
+
+    setPersonalTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== taskId) return t;
+        return {
+          ...t,
+          status: 'completed' as const,
+          approvalStatus: 'approved' as ApprovalStatus,
+          completedAt: nowIso,
+          approvalComment: comment || t.approvalComment,
+          workLogs: [...(t.workLogs || []), newLog],
+          approvalHistory: [...(t.approvalHistory || []), approvalLog],
+        };
+      })
+    );
+
+    // Notify submitter
+    addNotification({
+      type: 'approval_approved',
+      title: `✅ งานส่วนตัวของคุณผ่านการอนุมัติแล้ว!`,
+      message: `งาน "${taskTitle}" ได้รับการอนุมัติโดยคุณ ${approverName} ${comment ? `("${comment}")` : ''}`,
+      relatedTaskId: taskId,
+      targetRole: submitter,
+      senderRole: approverName,
+    });
+
+    showToastNotification(
+      submitter,
+      taskTitle,
+      `งานผ่านการอนุมัติโดยคุณ ${approverName} เรียบร้อยแล้ว!`
+    );
+  };
+
+  const rejectPersonalTask = (taskId: string, approverName: string, comment: string) => {
+    const nowIso = new Date().toISOString();
+    const target = personalTasks.find((t) => t.id === taskId);
+    const taskTitle = target?.title || 'งานส่วนตัว';
+    const submitter = target?.submittedForApprovalBy || target?.assignedTo || approverName;
+
+    const newLog: WorkLogEntry = {
+      id: `log-${Date.now()}`,
+      timestamp: nowIso,
+      author: approverName,
+      text: `❌ ปฏิเสธ/ยกเลิกคำขออนุมัติ: "${comment}"`,
+      type: 'approval',
+    };
+
+    const approvalLog: ApprovalLogEntry = {
+      id: `appr-${Date.now()}`,
+      timestamp: nowIso,
+      action: 'reject',
+      actorName: approverName,
+      actorRole: approverName,
+      comment,
+    };
+
+    setPersonalTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== taskId) return t;
+        return {
+          ...t,
+          status: 'in_progress' as const,
+          approvalStatus: 'rejected' as ApprovalStatus,
+          approvalComment: comment,
+          workLogs: [...(t.workLogs || []), newLog],
+          approvalHistory: [...(t.approvalHistory || []), approvalLog],
+        };
+      })
+    );
+
+    // Notify submitter
+    addNotification({
+      type: 'approval_rejected',
+      title: `❌ งานส่วนตัวไม่ผ่านการอนุมัติ / ถูกยกเลิก`,
+      message: `งาน "${taskTitle}" ถูกปฏิเสธโดยคุณ ${approverName} เหตุผล: "${comment}"`,
+      relatedTaskId: taskId,
+      targetRole: submitter,
+      senderRole: approverName,
+    });
+
+    showToastNotification(
+      submitter,
+      taskTitle,
+      `ผลการตรวจ: ไม่อนุมัติ/ยกเลิก โดยคุณ ${approverName}`
+    );
+  };
+
+  const requestPersonalTaskRevision = (
+    taskId: string,
+    approverName: string,
+    revisionComment: string,
+    attachments?: any[]
+  ) => {
+    const nowIso = new Date().toISOString();
+    const target = personalTasks.find((t) => t.id === taskId);
+    const taskTitle = target?.title || 'งานส่วนตัว';
+    const submitter = target?.submittedForApprovalBy || target?.assignedTo || approverName;
+
+    const newLog: WorkLogEntry = {
+      id: `log-${Date.now()}`,
+      timestamp: nowIso,
+      author: approverName,
+      text: `🔄 ส่งกลับให้แก้ไข: "${revisionComment}"${attachments?.length ? ` (แนบรูป ${attachments.length} รูป)` : ''}`,
+      type: 'approval',
+    };
+
+    const approvalLog: ApprovalLogEntry = {
+      id: `appr-${Date.now()}`,
+      timestamp: nowIso,
+      action: 'revision_request',
+      actorName: approverName,
+      actorRole: approverName,
+      comment: revisionComment,
+      attachments,
+    };
+
+    setPersonalTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== taskId) return t;
+        return {
+          ...t,
+          status: 'in_progress' as const,
+          approvalStatus: 'revision_requested' as ApprovalStatus,
+          approvalComment: revisionComment,
+          approvalAttachments: attachments || t.approvalAttachments,
+          workLogs: [...(t.workLogs || []), newLog],
+          approvalHistory: [...(t.approvalHistory || []), approvalLog],
+        };
+      })
+    );
+
+    // Notify submitter
+    addNotification({
+      type: 'approval_revision',
+      title: `🔄 งานส่วนตัวของคุณถูกส่งกลับให้แก้ไข`,
+      message: `งาน "${taskTitle}" ส่งกลับจากคุณ ${approverName}: "${revisionComment}" (มีรูปแนบรายละเอียด)`,
+      relatedTaskId: taskId,
+      targetRole: submitter,
+      senderRole: approverName,
+    });
+
+    showToastNotification(
+      submitter,
+      taskTitle,
+      `งานถูกส่งกลับให้แก้ไขโดยคุณ ${approverName}`
+    );
+  };
+
   // Notifications Handlers
   const markNotificationAsRead = (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
@@ -1168,6 +1756,10 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addCustomStep,
         deleteStep,
         clearProjectSteps,
+        submitStepForApproval,
+        approveStep,
+        rejectStep,
+        requestStepRevision,
         createProject,
         updateProject,
         deleteProject,
@@ -1177,6 +1769,10 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleChecklistItem,
         addPersonalTaskLog,
         handoverPersonalTask,
+        submitPersonalTaskForApproval,
+        approvePersonalTask,
+        rejectPersonalTask,
+        requestPersonalTaskRevision,
         markNotificationAsRead,
         markAllNotificationsAsRead,
         clearNotifications,

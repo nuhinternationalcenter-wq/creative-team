@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   CheckCircle2, 
   Clock, 
@@ -10,11 +10,16 @@ import {
   AlertCircle, 
   ArrowDown, 
   Sparkles,
-  Lock
+  Lock,
+  ShieldCheck,
+  RotateCcw,
+  Check
 } from 'lucide-react';
 import { ChainStep } from '../types';
 import { useWork } from '../context/WorkContext';
 import { isSameMember, isLeeAlias } from '../utils/memberMatch';
+import { SubmitApprovalModal } from './SubmitApprovalModal';
+import { ApprovalActionModal } from './ApprovalActionModal';
 
 interface SimpleStepListViewProps {
   steps: ChainStep[];
@@ -28,6 +33,8 @@ export const SimpleStepListView: React.FC<SimpleStepListViewProps> = ({
   onOpenHandover,
 }) => {
   const { selectedRole, updateStepStatus, activeProject } = useWork();
+  const [submitApprovalStep, setSubmitApprovalStep] = useState<ChainStep | null>(null);
+  const [approvalActionStep, setApprovalActionStep] = useState<ChainStep | null>(null);
 
   return (
     <div className="space-y-4">
@@ -126,8 +133,21 @@ export const SimpleStepListView: React.FC<SimpleStepListViewProps> = ({
                           </span>
                         )}
                         {isWaiting && (
-                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                            ⏳ รอตรวจสอบ
+                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 flex items-center space-x-1">
+                            <ShieldCheck className="w-3 h-3 text-amber-600" />
+                            <span>รออนุมัติ ({step.approverRole || 'หัวหน้า'})</span>
+                          </span>
+                        )}
+                        {step.approvalStatus === 'revision_requested' && (
+                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center space-x-1">
+                            <RotateCcw className="w-3 h-3 text-rose-600" />
+                            <span>ส่งกลับแก้ไข</span>
+                          </span>
+                        )}
+                        {step.approvalStatus === 'approved' && (
+                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center space-x-1">
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            <span>ผ่านอนุมัติ</span>
                           </span>
                         )}
                         {isPending && (
@@ -155,6 +175,17 @@ export const SimpleStepListView: React.FC<SimpleStepListViewProps> = ({
                         {step.title}
                       </h3>
 
+                      {/* Revision notice if requested */}
+                      {step.approvalStatus === 'revision_requested' && step.approvalComment && (
+                        <div className="p-2.5 bg-rose-50 rounded-xl border border-rose-200 text-xs text-rose-900 space-y-1">
+                          <span className="font-bold flex items-center space-x-1 text-rose-700">
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>สิ่งที่ต้องแก้ไข (จาก {step.approverRole || 'ผู้อนุมัติ'}):</span>
+                          </span>
+                          <p className="font-medium">{step.approvalComment}</p>
+                        </div>
+                      )}
+
                       {/* Handover Comment if Completed */}
                       {isCompleted && step.handoverComment && (
                         <p className="text-xs text-slate-600 bg-emerald-50/60 p-2 rounded-lg border border-emerald-100 italic">
@@ -165,7 +196,35 @@ export const SimpleStepListView: React.FC<SimpleStepListViewProps> = ({
                   </div>
 
                   {/* Right Side: Easy Action Buttons */}
-                  <div className="flex items-center space-x-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 justify-end shrink-0">
+                  <div className="flex items-center space-x-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 justify-end shrink-0 flex-wrap gap-y-1">
+                    {/* APPROVAL WORKFLOW BUTTONS */}
+                    {step.status === 'waiting_approval' ? (
+                      <button
+                        onClick={() => setApprovalActionStep(step)}
+                        className="px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs sm:text-sm font-bold flex items-center space-x-1.5 shadow-md shadow-amber-600/20 transition cursor-pointer"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>ตรวจ/อนุมัติ</span>
+                      </button>
+                    ) : step.approvalStatus === 'revision_requested' ? (
+                      <button
+                        onClick={() => setSubmitApprovalStep(step)}
+                        className="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs sm:text-sm font-bold flex items-center space-x-1.5 shadow-md shadow-rose-600/20 transition cursor-pointer"
+                      >
+                        <Send className="w-4 h-4" />
+                        <span>ส่งอนุมัติใหม่</span>
+                      </button>
+                    ) : !isCompleted ? (
+                      <button
+                        onClick={() => setSubmitApprovalStep(step)}
+                        className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-semibold flex items-center space-x-1 transition cursor-pointer shadow-2xs"
+                        title="ส่งขออนุมัติงานกลุ่มนี้"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
+                        <span>ส่งขออนุมัติ</span>
+                      </button>
+                    ) : null}
+
                     {/* If In Progress: Big Green Finish & Handover Button */}
                     {isInProgress && (
                       <button
@@ -217,6 +276,26 @@ export const SimpleStepListView: React.FC<SimpleStepListViewProps> = ({
           );
         })}
       </div>
+
+      {/* Submit Approval Modal */}
+      {submitApprovalStep && activeProject && (
+        <SubmitApprovalModal
+          isOpen={!!submitApprovalStep}
+          onClose={() => setSubmitApprovalStep(null)}
+          step={submitApprovalStep}
+          projectId={activeProject.id}
+        />
+      )}
+
+      {/* Approval Action Modal */}
+      {approvalActionStep && activeProject && (
+        <ApprovalActionModal
+          isOpen={!!approvalActionStep}
+          onClose={() => setApprovalActionStep(null)}
+          step={approvalActionStep}
+          projectId={activeProject.id}
+        />
+      )}
     </div>
   );
 };
