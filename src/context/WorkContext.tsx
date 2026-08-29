@@ -527,20 +527,37 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const combineProjectSteps = (project: TeamChainProject, tasks: PersonalTask[]): TeamChainProject => {
     if (!project) return project;
     const matchingPersonalTasks = (tasks || []).filter((t) => t && t.projectId === project.id);
-    if (matchingPersonalTasks.length === 0) return project;
 
-    const existingStepIds = new Set(project.steps.map((s) => s.id));
+    // Remove any duplicate personal steps in project.steps that share title & assignee with matchingPersonalTasks
+    const personalTaskKeys = new Set(
+      matchingPersonalTasks.map((t) => `${t.title.trim().toLowerCase()}_${(t.assignedTo || '').trim().toLowerCase()}`)
+    );
+
+    const cleanSteps = project.steps.filter((s) => {
+      if (s.taskScope === 'personal') {
+        const key = `${s.title.trim().toLowerCase()}_${(s.assignedPerson || s.assignedRole || '').trim().toLowerCase()}`;
+        if (personalTaskKeys.has(key) && !matchingPersonalTasks.some((t) => t.id === s.id)) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    if (matchingPersonalTasks.length === 0) {
+      if (cleanSteps.length === project.steps.length) return project;
+      return { ...project, steps: cleanSteps };
+    }
+
+    const existingStepIds = new Set(cleanSteps.map((s) => s.id));
     const newPersonalSteps: ChainStep[] = [];
 
     matchingPersonalTasks.forEach((t, idx) => {
       if (!existingStepIds.has(t.id)) {
-        newPersonalSteps.push(mapPersonalTaskToStep(t, project.steps.length + idx + 1));
+        newPersonalSteps.push(mapPersonalTaskToStep(t, cleanSteps.length + idx + 1));
       }
     });
 
-    if (newPersonalSteps.length === 0) return project;
-
-    const combinedSteps = [...project.steps, ...newPersonalSteps];
+    const combinedSteps = [...cleanSteps, ...newPersonalSteps];
     const completedCount = combinedSteps.filter((s) => s.status === 'completed').length;
     const progress = combinedSteps.length > 0 ? Math.round((completedCount / combinedSteps.length) * 100) : project.progress;
 

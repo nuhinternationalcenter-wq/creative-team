@@ -111,9 +111,9 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
       ],
     };
 
-    addCustomStep(targetProject.id, newStepData);
-
-    if (taskScope === 'personal') {
+    if (taskScope === 'team') {
+      addCustomStep(targetProject.id, newStepData);
+    } else {
       addPersonalTask({
         projectId: targetProject.id,
         title: title.trim(),
@@ -122,6 +122,7 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
         priority: 'medium',
         status: status === 'completed' ? 'completed' : status === 'waiting_approval' ? 'waiting_approval' : 'in_progress',
         assignedTo: assignedPersonName,
+        assignedBy: assignedBy || undefined,
         dueDate,
         checklist: [],
         tags: ['จากแดชบอร์ด/ตาราง'],
