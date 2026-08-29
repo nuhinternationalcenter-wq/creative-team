@@ -102,7 +102,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     const templateSteps = useTemplate && activeProject
       ? activeProject.steps.map((s) => ({
           ...s,
-          id: `step-${Date.now()}-${s.stepNumber}`,
+          id: `step-${Date.now()}-${s.stepNumber}-${Math.random().toString(36).substr(2, 4)}`,
           status: s.stepNumber === 1 ? 'in_progress' : 'pending',
           completedAt: undefined,
           handoverComment: undefined,
@@ -110,7 +110,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
         }))
       : [
           {
-            id: `step-${Date.now()}-1`,
+            id: `step-${Date.now()}-1-${Math.random().toString(36).substr(2, 4)}`,
             stepNumber: 1,
             title: 'เริ่มต้นวางแผนคอนเซปต์โปรเจกต์',
             assignedRole: 'มีมี่',

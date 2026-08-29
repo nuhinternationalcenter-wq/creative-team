@@ -117,7 +117,7 @@ export const INITIAL_PROJECTS: TeamChainProject[] = [
         handoverComment: 'ส่งเข้า LINE กลุ่มและอัปโหลดเข้าไดรฟ์กลางแล้ว ส่งต่อให้ PO และซูรีดำเนินการคู่ขนาน',
         estimatedHours: 1,
         workLogs: [
-          { id: 'log-5', timestamp: '2026-08-20T10:00:00Z', author: 'มีมี่', text: 'แจ้งในไลน์กลุ่ม ส่งต่องานลูกโซ่ถัดไป', durationMinutes: 30, type: 'handover' }
+          { id: 'log-5', timestamp: '2026-08-20T10:00:00Z', author: 'มีมี่', text: 'แจ้งในไลน์กลุ่ม ส่งต่องานถัดไป', durationMinutes: 30, type: 'handover' }
         ]
       },
 
@@ -532,7 +532,7 @@ export const INITIAL_PERSONAL_TASKS: PersonalTask[] = [
   {
     id: 'pt-005',
     title: 'อัปเดตระบบบันทึกงานประจำวันและแผนงานส่วนตัว',
-    description: 'จัดระเบียบตารางนัดหมายและการส่งต่องานลูกโซ่ของตนเอง',
+    description: 'จัดระเบียบตารางนัดหมายและการส่งต่องานของตนเอง',
     category: 'ส่วนตัว',
     priority: 'low',
     status: 'completed',

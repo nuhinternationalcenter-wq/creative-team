@@ -63,7 +63,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     setChecklistItems([
       ...checklistItems,
       {
-        id: `c-${Date.now()}`,
+        id: `c-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         text: newChecklistText.trim(),
         done: false,
       },

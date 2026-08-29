@@ -102,7 +102,7 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
       attachments,
       workLogs: [
         {
-          id: `log-${Date.now()}`,
+          id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           timestamp: new Date().toISOString(),
           author: assignedPersonName,
           text: `เพิ่ม${taskScope === 'team' ? 'งานกลุ่ม' : 'งานส่วนตัว'}ในช่อง ${assignedRole}: ${title.trim()}`,
@@ -118,7 +118,7 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
         projectId: targetProject.id,
         title: title.trim(),
         description: description.trim() || undefined,
-        category: 'งานด่วน/งานโต๊ะ',
+        category: 'งานด่วน',
         priority: 'medium',
         status: status === 'completed' ? 'completed' : status === 'waiting_approval' ? 'waiting_approval' : 'in_progress',
         assignedTo: assignedPersonName,

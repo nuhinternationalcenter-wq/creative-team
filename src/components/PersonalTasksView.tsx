@@ -879,7 +879,7 @@ export const PersonalTasksView: React.FC<PersonalTasksViewProps> = ({
                               <div className="pl-5 pt-1 space-y-1.5">
                                 <span className="text-[10px] font-bold text-rose-700 block">🖼️ รูปภาพ/หลักฐานที่ต้องแก้ไข (คลิกเพื่อดูภาพใหญ่):</span>
                                 <div className="flex items-center flex-wrap gap-2">
-                                  {task.approvalAttachments.map((att) => (
+                                  {task.approvalAttachments.filter((att, idx, self) => self.findIndex(a => a.id === att.id) === idx).map((att) => (
                                     <div
                                       key={att.id}
                                       onClick={() => {
@@ -942,7 +942,7 @@ export const PersonalTasksView: React.FC<PersonalTasksViewProps> = ({
                           {/* Attachments Mini Bar */}
                           {task.attachments && task.attachments.length > 0 && (
                             <div className="flex items-center flex-wrap gap-1">
-                              {task.attachments.map((att) => (
+                              {task.attachments.filter((att, idx, self) => self.findIndex(a => a.id === att.id) === idx).map((att) => (
                                 <span
                                   key={att.id}
                                   onClick={(e) => {

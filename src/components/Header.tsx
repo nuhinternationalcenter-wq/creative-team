@@ -14,7 +14,8 @@ import {
   CheckSquare,
   FileText,
   ShieldCheck,
-  Users
+  Users,
+  Volume2
 } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 
@@ -50,7 +51,12 @@ export const Header: React.FC<HeaderProps> = ({
     customLogo,
     setCustomLogo,
     themeColor,
-    setThemeColor
+    setThemeColor,
+    isRealtimeConnected,
+    forceSyncFromCloud,
+    isSoundEnabled,
+    setIsSoundEnabled,
+    playNotificationSound
   } = useWork();
 
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
@@ -255,33 +261,48 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
 
           {/* Right Action Controls */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
+            {/* Realtime Sync Status Indicator */}
+            <button
+              onClick={forceSyncFromCloud}
+              className={`flex items-center space-x-1 px-2 sm:px-2.5 py-1.5 rounded-xl border text-xs font-bold transition cursor-pointer shadow-2xs shrink-0 ${
+                isRealtimeConnected
+                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
+                  : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200'
+              }`}
+              title="สถานะเชื่อมต่อคลาวด์เรียลไทม์ (คลิกเพื่อรีเฟรชข้อมูลล่าสุด)"
+            >
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isRealtimeConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
+              <span className="hidden sm:inline">{isRealtimeConnected ? 'เรียลไทม์' : 'กำลังดึงข้อมูล'}</span>
+              <RefreshCw className="w-3.5 h-3.5 text-slate-500 hover:text-slate-800 shrink-0" />
+            </button>
+
             {/* Manage Roles & Permissions Button */}
             {onOpenManageMembers && (
               <button
                 id="header-manage-members-btn"
                 onClick={onOpenManageMembers}
-                className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold border border-indigo-200 transition cursor-pointer flex items-center space-x-1.5 shadow-2xs"
+                className="px-2 sm:px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold border border-indigo-200 transition cursor-pointer flex items-center space-x-1 shrink-0 shadow-2xs"
                 title="จัดการสิทธิ์สมาชิก บทบาท และผู้อนุมัติ"
               >
-                <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                <span className="text-xs">จัดการสิทธิ์ & ทีม</span>
+                <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span className="text-xs hidden sm:inline">จัดการสิทธิ์</span>
               </button>
             )}
 
             {/* Active User Perspective Dropdown */}
-            <div className="relative flex items-center">
-              <div className="flex items-center bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 transition">
-                <UserCheck className="w-3.5 h-3.5 mr-1.5 text-slate-500" />
-                <span className="text-slate-400 mr-1 hidden sm:inline">มุมมอง:</span>
+            <div className="relative flex items-center shrink-0">
+              <div className="flex items-center bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-2 sm:px-2.5 py-1.5 text-xs text-slate-700 transition max-w-[125px] sm:max-w-none">
+                <UserCheck className="w-3.5 h-3.5 mr-1 text-slate-500 shrink-0" />
+                <span className="text-slate-400 mr-1 hidden md:inline">มุมมอง:</span>
                 <select
                   id="role-perspective-select"
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value)}
                   aria-label="เลือกมุมมองผู้ใช้งาน"
-                  className="bg-transparent text-slate-900 font-medium focus:outline-none cursor-pointer pr-1"
+                  className="bg-transparent text-slate-900 font-medium focus:outline-none cursor-pointer pr-1 truncate text-xs"
                 >
-                  <option value="all" className="bg-white text-slate-900">✨ ทุกบทบาท (ทุกคน)</option>
+                  <option value="all" className="bg-white text-slate-900">✨ ทุกคน</option>
                   <optgroup label="สมาชิกในทีม" className="bg-white text-slate-900 font-semibold">
                     {members.map((m) => (
                       <option key={m.id} value={m.name} className="bg-white text-slate-900">
@@ -297,7 +318,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="header-notification-btn"
               onClick={onOpenNotifications}
-              className="relative p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 transition cursor-pointer"
+              className="relative p-1.5 sm:p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 transition cursor-pointer shrink-0"
               title="การแจ้งเตือนงานและกำหนดส่ง"
             >
               <Bell className="w-4 h-4" />
@@ -309,20 +330,25 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {/* Backup & Settings dropdown toggle */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 id="header-settings-toggle"
                 onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-                className="px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium border border-slate-200 transition cursor-pointer flex items-center space-x-1.5"
+                className="px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium border border-slate-200 transition cursor-pointer flex items-center space-x-1"
                 title="ตั้งค่าธีมและข้อมูล"
               >
-                <Layers className="w-4 h-4 text-slate-500" />
+                <Layers className="w-4 h-4 text-slate-500 shrink-0" />
                 <span className="text-xs hidden sm:inline">ตั้งค่าระบบ</span>
               </button>
 
               {showSettingsMenu && (
-                <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200 shadow-xl py-3 z-50 text-xs">
-                  <div className="px-4 pb-2 border-b border-slate-100 mb-2">
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowSettingsMenu(false)} 
+                  />
+                  <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl bg-white border border-slate-200 shadow-xl py-3 z-50 text-xs">
+                    <div className="px-4 pb-2 border-b border-slate-100 mb-2">
                     <h3 className="font-bold text-sm text-slate-800">ตั้งค่าระบบ (Settings)</h3>
                   </div>
 
@@ -344,6 +370,42 @@ export const Header: React.FC<HeaderProps> = ({
                       </button>
                     </div>
                   )}
+
+                  <div className="px-4 py-1.5 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                    เสียงและการแจ้งเตือน
+                  </div>
+                  <div className="px-2 mb-2">
+                    <div className="flex items-center justify-between px-3 py-2 text-slate-700 hover:bg-slate-50 rounded-lg transition group">
+                      <div className="flex items-center space-x-2">
+                        <Volume2 className={`w-4 h-4 ${isSoundEnabled ? 'text-indigo-600' : 'text-slate-400'}`} />
+                        <span className="font-medium">เสียงแจ้งเตือนงาน</span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsSoundEnabled(!isSoundEnabled);
+                        }}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                          isSoundEnabled ? 'bg-indigo-600' : 'bg-slate-200'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                            isSoundEnabled ? 'translate-x-4.5' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        playNotificationSound(true);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-[10px] text-indigo-600 hover:text-indigo-700 hover:underline transition font-bold cursor-pointer"
+                    >
+                      ▶️ ทดสอบเสียงแจ้งเตือน
+                    </button>
+                  </div>
 
                   <div className="px-4 py-1.5 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                     ปรับแต่งธีม & โลโก้
@@ -451,6 +513,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
                   </div>
                 </div>
+              </>
               )}
             </div>
 

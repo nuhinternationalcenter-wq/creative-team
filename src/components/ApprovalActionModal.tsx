@@ -102,7 +102,7 @@ export const ApprovalActionModal: React.FC<ApprovalActionModalProps> = ({
               setPasteNotice('กำลังอัปโหลดรูปภาพที่วางจากคลิปบอร์ด...');
               const url = await uploadFileToStorage(file, 'approval_revisions');
               const newAttachment: TaskAttachment = {
-                id: `att-${Date.now()}`,
+                id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
                 name: `ภาพคอมเมนต์แก้ไข_${new Date().toLocaleTimeString('th-TH')}.png`,
                 type: 'image',
                 url,
@@ -120,7 +120,7 @@ export const ApprovalActionModal: React.FC<ApprovalActionModalProps> = ({
                 const base64 = event.target?.result as string;
                 if (base64) {
                   const fallbackAttachment: TaskAttachment = {
-                    id: `att-${Date.now()}`,
+                    id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
                     name: `ภาพคอมเมนต์แก้ไข_${new Date().toLocaleTimeString('th-TH')}.png`,
                     type: 'image',
                     url: base64,
@@ -249,7 +249,7 @@ export const ApprovalActionModal: React.FC<ApprovalActionModalProps> = ({
               <div className="pt-1.5 border-t border-slate-200 space-y-1">
                 <span className="text-[11px] font-bold text-slate-600 block">📎 ไฟล์ / รูปที่ส่งตรวจ ({effectiveTarget.item.attachments.length} รายการ):</span>
                 <div className="flex flex-wrap gap-2">
-                  {effectiveTarget.item.attachments.map((att) => (
+                  {effectiveTarget.item.attachments.filter((att, idx, self) => self.findIndex(a => a.id === att.id) === idx).map((att) => (
                     <a
                       key={att.id}
                       href={att.url}
@@ -398,7 +398,7 @@ export const ApprovalActionModal: React.FC<ApprovalActionModalProps> = ({
                       try {
                         const url = await uploadFileToStorage(file, 'approval_revisions');
                         const newAtt: TaskAttachment = {
-                          id: `att-${Date.now()}-${i}`,
+                          id: `att-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 4)}`,
                           name: file.name,
                           type: 'image',
                           url,
@@ -415,7 +415,7 @@ export const ApprovalActionModal: React.FC<ApprovalActionModalProps> = ({
                             setAttachments((prev) => [
                               ...prev,
                               {
-                                id: `att-${Date.now()}-${i}`,
+                                id: `att-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 4)}`,
                                 name: file.name,
                                 type: 'image',
                                 url: base64,
@@ -441,7 +441,7 @@ export const ApprovalActionModal: React.FC<ApprovalActionModalProps> = ({
                     รูปภาพประกอบการแก้ไข ({attachments.length} รูป):
                   </span>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {attachments.map((att) => (
+                    {attachments.filter((att, idx, self) => self.findIndex(a => a.id === att.id) === idx).map((att) => (
                       <div key={att.id} className="relative group rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
                         <img 
                           src={att.url} 

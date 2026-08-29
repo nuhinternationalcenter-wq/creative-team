@@ -675,7 +675,7 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
         onMouseLeave={handleMouseLeave}
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
-        className={`overflow-x-auto overflow-y-auto max-h-[75vh] pb-6 pt-1 transition-all rounded-2xl ${
+        className={`overflow-x-auto overflow-y-auto min-h-[500px] max-h-[calc(100vh-140px)] pb-6 pt-1 transition-all rounded-2xl ${
           isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
         }`}
         style={{ scrollBehavior: isDragging ? 'auto' : 'smooth' }}
@@ -948,7 +948,7 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                                 <span className="truncate max-w-[100px]">{step.link.replace(/^https?:\/\//i, '')}</span>
                               </span>
                             )}
-                            {attachments.slice(0, 3).map((att) => (
+                            {attachments.slice(0, 3).filter((att, idx, self) => self.findIndex(a => a.id === att.id) === idx).map((att) => (
                               <span
                                 key={att.id}
                                 onClick={(e) => {
@@ -990,7 +990,7 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                             <p className="break-words font-medium">{step.approvalComment}</p>
                             {step.approvalAttachments && step.approvalAttachments.length > 0 && (
                               <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                                {step.approvalAttachments.map((att) => (
+                                {step.approvalAttachments.filter((att, idx, self) => self.findIndex(a => a.id === att.id) === idx).map((att) => (
                                   <button
                                     key={att.id}
                                     type="button"

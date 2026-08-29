@@ -150,6 +150,15 @@ interface WorkContextType {
   setCustomLogo: (logo: string) => void;
   themeColor: string;
   setThemeColor: (color: string) => void;
+  notificationPreference: string;
+  setNotificationPreference: (pref: string) => void;
+  isSoundEnabled: boolean;
+  setIsSoundEnabled: (enabled: boolean) => void;
+  playNotificationSound: (force?: boolean) => void;
+
+  // Real-time status
+  isRealtimeConnected: boolean;
+  forceSyncFromCloud: () => void;
 }
 
 const STORAGE_KEY_MEMBERS = 'workchain_members_v2';
@@ -158,6 +167,7 @@ const STORAGE_KEY_TASKS = 'workchain_personal_tasks_v2';
 const STORAGE_KEY_NOTIFS = 'workchain_notifications_v2';
 const STORAGE_KEY_DOCUMENTS = 'workchain_documents_v2';
 const STORAGE_KEY_ROLE = 'workchain_active_role_v2';
+const STORAGE_KEY_NOTIF_PREF = 'workchain_notif_pref_v2';
 
 const WorkContext = createContext<WorkContextType | undefined>(undefined);
 
@@ -268,7 +278,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const showToastNotification = (recipient: string, taskTitle: string, message: string) => {
     const newToast: ToastNotification = {
-      id: `toast-${Date.now()}`,
+      id: `toast-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       recipient,
       taskTitle,
       message,
@@ -293,6 +303,69 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return localStorage.getItem('workchain_theme_color') || 'slate';
   });
 
+  const [notificationPreference, setNotificationPreferenceState] = useState<string>(() => {
+    return localStorage.getItem(STORAGE_KEY_NOTIF_PREF) || 'all';
+  });
+
+  const [isSoundEnabled, setIsSoundEnabledState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('workchain_sound_enabled');
+    return saved === null ? true : saved === 'true';
+  });
+
+  const setIsSoundEnabled = (enabled: boolean) => {
+    setIsSoundEnabledState(enabled);
+    localStorage.setItem('workchain_sound_enabled', String(enabled));
+  };
+
+  const playNotificationSound = (force = false) => {
+    if (!isSoundEnabled && !force) return;
+    
+    // We'll try the local files first as they are more reliable
+    const soundUrls = [
+      '/sounds/soft_bubble.mp3',
+      '/sounds/zen_chime.mp3',
+      '/sounds/warm_alert.mp3',
+      '/sounds/soft_minimal.mp3',
+      '/sounds/gentle_tone.mp3',
+      '/sounds/line_ding.mp3'
+    ];
+
+    const playSound = (index: number) => {
+      if (index >= soundUrls.length) {
+        console.warn('All notification sound sources failed');
+        return;
+      }
+      
+      try {
+        const url = soundUrls[index];
+        // Only use cache buster for external URLs
+        const finalUrl = url.startsWith('http') ? `${url}?t=${Date.now()}` : url;
+        
+        const audio = new Audio(finalUrl);
+        audio.volume = 0.8;
+        
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            console.warn(`Audio source ${index} failed (${url}):`, error);
+            // Try next source
+            playSound(index + 1);
+          });
+        }
+      } catch (e) {
+        console.warn(`Audio initialization ${index} failed`, e);
+        playSound(index + 1);
+      }
+    };
+
+    playSound(0);
+  };
+
+  const setNotificationPreference = (pref: string) => {
+    setNotificationPreferenceState(pref);
+    localStorage.setItem(STORAGE_KEY_NOTIF_PREF, pref);
+  };
+
   const [isFirebaseLoaded, setIsFirebaseLoaded] = useState(false);
 
   const setCustomLogo = (logo: string) => {
@@ -306,6 +379,37 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState<boolean>(false);
+
+  const forceSyncFromCloud = async () => {
+    try {
+      const { db } = await import('../lib/firebase');
+      const { doc, getDoc } = await import('firebase/firestore');
+      const docRef = doc(db, 'settings', 'main_workspace');
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        const migrated = migrateAllDataToMrLee({
+          members: data.members,
+          projects: data.projects,
+          personalTasks: data.personalTasks,
+          notifications: data.notifications,
+          documents: data.documents,
+        });
+        if (migrated.members && migrated.members.length > 0) setMembers(migrated.members);
+        if (migrated.projects) setProjects(migrated.projects);
+        if (migrated.personalTasks) setPersonalTasks(migrated.personalTasks);
+        if (migrated.notifications) setNotifications(migrated.notifications);
+        if (migrated.documents) setDocuments(migrated.documents);
+        if (data.customLogo !== undefined) setCustomLogoState(data.customLogo);
+        if (data.themeColor !== undefined) setThemeColorState(data.themeColor);
+        setIsRealtimeConnected(true);
+      }
+    } catch (err) {
+      console.error('forceSyncFromCloud failed', err);
+    }
+  };
+
   // Firestore real-time sync with onSnapshot
   useEffect(() => {
     let unsubscribe: any;
@@ -314,21 +418,11 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsFirebaseLoaded(true);
     }, 1500);
 
-    import('../lib/sync').then(({ subscribeToWorkspace, hasPendingSync }) => {
+    import('../lib/sync').then(({ subscribeToWorkspace }) => {
       unsubscribe = subscribeToWorkspace((data, hasPendingWrites) => {
         setIsFirebaseLoaded(true);
+        setIsRealtimeConnected(true);
         clearTimeout(fallbackTimer);
-
-        // Shield recent local edits: Ignore incoming snapshot if user made a local mutation within 2.5s
-        const timeSinceMutation = Date.now() - lastLocalMutationTimeRef.current;
-        if (timeSinceMutation < 2500) {
-          return;
-        }
-
-        // Prevent bouncing: Ignore snapshot if we have a pending debounced local write
-        if (hasPendingSync && hasPendingSync()) {
-          return;
-        }
 
         if (data && !hasPendingWrites) {
           isSnapshotUpdatingRef.current = true;
@@ -339,6 +433,33 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
             notifications: data.notifications,
             documents: data.documents,
           });
+
+          // Check for new notifications to play sound
+          if (migrated.notifications && migrated.notifications.length > 0) {
+            const oldNotifIds = new Set((lastServerStateRef.current?.notifications || []).map((n: any) => n.id));
+            const newNotifs = migrated.notifications.filter((n: any) => !oldNotifIds.has(n.id));
+            
+            if (newNotifs.length > 0) {
+              const currentRole = localStorage.getItem(STORAGE_KEY_ROLE) || 'all';
+              const userPref = localStorage.getItem(STORAGE_KEY_NOTIF_PREF) || 'all';
+              
+              // If notification is for the current user/role
+              const hasRelevantNotif = newNotifs.some((n: any) => {
+                if (currentRole === 'all') return true;
+                if (n.targetRole === currentRole || n.targetRole === 'ทุกคน' || !n.targetRole) return true;
+                if (userPref !== 'all' && n.targetRole === userPref) return true;
+                return false;
+              });
+
+              if (hasRelevantNotif) {
+                // We can't call playNotificationSound directly here easily because of closure, 
+                // but we can trigger a side effect or just use the same logic
+                if (localStorage.getItem('workchain_sound_enabled') !== 'false') {
+                  playNotificationSound();
+                }
+              }
+            }
+          }
           
           lastServerStateRef.current = {
             members: migrated.members || [],
@@ -587,7 +708,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Member CRUD
   const addMember = (newMemberData: Omit<TeamMember, 'id'>) => {
-    const id = `member-${Date.now()}`;
+    const id = `member-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     const newMember: TeamMember = {
       ...newMemberData,
       id,
@@ -705,7 +826,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (t.id !== stepId) return t;
           const updatedLogs = [...(t.workLogs || [])];
           updatedLogs.push({
-            id: `log-${Date.now()}`,
+            id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
             timestamp: new Date().toISOString(),
             author: t.assignedTo,
             text: 'นำงานกลับมาทำต่อจากประวัติงานที่เสร็จสิ้น',
@@ -731,7 +852,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (step.id !== stepId) return step;
           const updatedLogs = [...(step.workLogs || [])];
           updatedLogs.push({
-            id: `log-${Date.now()}`,
+            id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
             timestamp: new Date().toISOString(),
             author: step.assignedPerson,
             text: 'นำงานกลับมาทำต่อจากประวัติงานที่เสร็จสิ้น',
@@ -771,6 +892,8 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       read: false,
     };
     setNotifications((prev) => [newNotif, ...prev]);
+    
+    playNotificationSound();
   };
 
   // Step Status Update
@@ -789,7 +912,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const updatedLogs = [...(t.workLogs || [])];
           if (workLogText) {
             updatedLogs.push({
-              id: `log-${Date.now()}`,
+              id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
               timestamp: new Date().toISOString(),
               author: t.assignedTo,
               text: workLogText,
@@ -798,7 +921,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           if (handoverComment) {
             updatedLogs.push({
-              id: `log-${Date.now() + 1}`,
+              id: `log-${Date.now() + 1}-${Math.random().toString(36).substr(2, 4)}`,
               timestamp: new Date().toISOString(),
               author: t.assignedTo,
               text: `ส่งต่องาน: ${handoverComment}`,
@@ -830,7 +953,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const updatedLogs = [...(step.workLogs || [])];
           if (workLogText) {
             updatedLogs.push({
-              id: `log-${Date.now()}`,
+              id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
               timestamp: new Date().toISOString(),
               author: step.assignedPerson,
               text: workLogText,
@@ -889,7 +1012,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (t.id !== stepId) return t;
           const targetLogs = [...(t.workLogs || [])];
           targetLogs.push({
-            id: `log-${Date.now()}`,
+            id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
             timestamp: new Date().toISOString(),
             author: t.assignedTo,
             text: handoverComment || 'ส่งมอบงานสำเร็จ',
@@ -925,7 +1048,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const targetLogs = [...(targetStep.workLogs || [])];
         targetLogs.push({
-          id: `log-${Date.now()}`,
+          id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           timestamp: new Date().toISOString(),
           author: targetStep.assignedPerson,
           text: handoverComment || 'ส่งมอบงานในกระบวนการลูกโซ่สำเร็จ',
@@ -994,7 +1117,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!hasUnlockedForRecipient) {
             const maxStepNum = updatedSteps.reduce((max, s) => Math.max(max, s.stepNumber), 0);
             const createdStep: ChainStep = {
-              id: `step-${Date.now()}`,
+              id: `step-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
               stepNumber: maxStepNum + 1,
               title: newStepTitle?.trim() || `งานส่งต่อจาก ${targetStep.assignedRole}: ${targetStep.title}`,
               description: handoverComment,
@@ -1011,7 +1134,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
               estimatedHours: 4,
               workLogs: [
                 {
-                  id: `log-${Date.now()}`,
+                  id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
                   timestamp: new Date().toISOString(),
                   author: targetStep.assignedRole,
                   text: `ส่งมอบงานให้ ${customNextAssignee}: ${handoverComment}`,
@@ -1055,7 +1178,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Notification for completed handover
         addNotification({
           type: 'handover',
-          title: `ส่งต่องานลูกโซ่: สเต็ป ${targetStep.stepNumber} สำเร็จ`,
+          title: `ส่งมอบงานสำเร็จ: สเต็ป ${targetStep.stepNumber}`,
           message: `${targetStep.assignedPerson} ได้ส่งมอบงาน "${targetStep.title}" เรียบร้อย: "${handoverComment}"`,
           relatedProjectId: projectId,
           relatedStepId: stepId,
@@ -1097,7 +1220,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 ...(step.workLogs || []),
                 {
                   ...log,
-                  id: `log-${Date.now()}`,
+                  id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
                   timestamp: new Date().toISOString(),
                 },
               ],
@@ -1230,7 +1353,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (proj.id !== projectId) return proj;
         const createdStep: ChainStep = {
           ...newStep,
-          id: `step-${Date.now()}`,
+          id: `step-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           workLogs: newStep.workLogs || [],
         };
         const updatedSteps = [...proj.steps, createdStep].sort((a, b) => a.stepNumber - b.stepNumber);
@@ -1308,7 +1431,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         stepTitle = targetStep.title;
 
         const newLog: WorkLogEntry = {
-          id: `log-${Date.now()}`,
+          id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           timestamp: nowIso,
           author: submitterRole,
           text: `ส่งขออนุมัติงานไปยังคุณ ${approverRole}${comment ? `: "${comment}"` : ''}`,
@@ -1316,7 +1439,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
 
         const approvalLog: ApprovalLogEntry = {
-          id: `appr-${Date.now()}`,
+          id: `appr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           timestamp: nowIso,
           action: 'submit',
           actorName: submitterRole,
@@ -1396,7 +1519,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         targetSubmitter = targetStep.submittedForApprovalBy || targetStep.assignedPerson || targetStep.assignedRole;
 
         const newLog: WorkLogEntry = {
-          id: `log-${Date.now()}`,
+          id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           timestamp: nowIso,
           author: approverName,
           text: `✅ อนุมัติงานเรียบร้อยแล้ว: "${comment || 'ผ่านการตรวจ'}"`,
@@ -1404,7 +1527,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
 
         const approvalLog: ApprovalLogEntry = {
-          id: `appr-${Date.now()}`,
+          id: `appr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           timestamp: nowIso,
           action: 'approve',
           actorName: approverName,
@@ -1475,7 +1598,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         targetSubmitter = targetStep.submittedForApprovalBy || targetStep.assignedPerson || targetStep.assignedRole;
 
         const newLog: WorkLogEntry = {
-          id: `log-${Date.now()}`,
+          id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           timestamp: nowIso,
           author: approverName,
           text: `❌ ปฏิเสธ/ยกเลิกคำขออนุมัติ: "${comment}"`,
@@ -1483,7 +1606,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
 
         const approvalLog: ApprovalLogEntry = {
-          id: `appr-${Date.now()}`,
+          id: `appr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           timestamp: nowIso,
           action: 'reject',
           actorName: approverName,
@@ -1555,7 +1678,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         targetSubmitter = targetStep.submittedForApprovalBy || targetStep.assignedPerson || targetStep.assignedRole;
 
         const newLog: WorkLogEntry = {
-          id: `log-${Date.now()}`,
+          id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           timestamp: nowIso,
           author: approverName,
           text: `🔄 ส่งกลับให้แก้ไข: "${revisionComment}"${attachments?.length ? ` (แนบรูป ${attachments.length} รูป)` : ''}`,
@@ -1563,7 +1686,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
 
         const approvalLog: ApprovalLogEntry = {
-          id: `appr-${Date.now()}`,
+          id: `appr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           timestamp: nowIso,
           action: 'revision_request',
           actorName: approverName,
@@ -1617,7 +1740,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const createProject = (projectData: Omit<TeamChainProject, 'id' | 'createdAt' | 'updatedAt' | 'progress'>) => {
     const newProj: TeamChainProject = {
       ...projectData,
-      id: `proj-${Date.now()}`,
+      id: `proj-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       progress: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -1653,7 +1776,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     lastLocalMutationTimeRef.current = Date.now();
     const newTask: PersonalTask = {
       ...taskData,
-      id: `pt-${Date.now()}`,
+      id: `pt-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       createdAt: new Date().toISOString(),
       checklist: taskData.checklist || [],
       tags: taskData.tags || [],
@@ -1717,7 +1840,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (t.id !== taskId) return t;
         const newLog: WorkLogEntry = {
           ...log,
-          id: `log-${Date.now()}`,
+          id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           timestamp: new Date().toISOString(),
         };
         const currentSpent = t.spentMinutes || 0;
@@ -1774,7 +1897,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
             workLogs: [
               ...(t.workLogs || []),
               {
-                id: `log-${Date.now()}`,
+                id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
                 timestamp: nowIso,
                 author,
                 text: `ส่งต่องานให้คุณ ${targetAssignee}: "${comment}"`,
@@ -1787,7 +1910,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Create new follow-up task for recipient
         const nextTask: PersonalTask = {
-          id: `pt-${Date.now()}`,
+          id: `pt-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           title: newTitle?.trim() || `${currentTask.title} (ส่งต่อจาก ${author})`,
           description: `งานส่งต่อจากคุณ ${author}\n\nข้อความส่งมอบ:\n${comment}`,
           category: currentTask.category,
@@ -1805,7 +1928,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           attachments: newAttachments || currentTask.attachments || [],
           workLogs: [
             {
-              id: `log-${Date.now() + 1}`,
+              id: `log-${Date.now() + 1}-${Math.random().toString(36).substr(2, 4)}`,
               timestamp: nowIso,
               author: 'ระบบ',
               text: `ได้รับงานส่งต่อจากคุณ ${author}`,
@@ -1834,7 +1957,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
             workLogs: [
               ...(t.workLogs || []),
               {
-                id: `log-${Date.now()}`,
+                id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
                 timestamp: nowIso,
                 author,
                 text: `ส่งมอบความรับผิดชอบให้คุณ ${targetAssignee}: "${comment}"`,
@@ -1877,7 +2000,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const taskTitle = target?.title || 'งานส่วนตัว';
 
     const newLog: WorkLogEntry = {
-      id: `log-${Date.now()}`,
+      id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: nowIso,
       author: submitterRole,
       text: `ส่งขออนุมัติงานไปยังคุณ ${approverRole}${comment ? `: "${comment}"` : ''}`,
@@ -1885,7 +2008,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const approvalLog: ApprovalLogEntry = {
-      id: `appr-${Date.now()}`,
+      id: `appr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: nowIso,
       action: 'submit',
       actorName: submitterRole,
@@ -1946,7 +2069,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const submitter = target?.submittedForApprovalBy || target?.assignedTo || approverName;
 
     const newLog: WorkLogEntry = {
-      id: `log-${Date.now()}`,
+      id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: nowIso,
       author: approverName,
       text: `✅ อนุมัติงานเรียบร้อยแล้ว: "${comment || 'ผ่านการตรวจ'}"`,
@@ -1954,7 +2077,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const approvalLog: ApprovalLogEntry = {
-      id: `appr-${Date.now()}`,
+      id: `appr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: nowIso,
       action: 'approve',
       actorName: approverName,
@@ -2002,7 +2125,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const submitter = target?.submittedForApprovalBy || target?.assignedTo || approverName;
 
     const newLog: WorkLogEntry = {
-      id: `log-${Date.now()}`,
+      id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: nowIso,
       author: approverName,
       text: `❌ ปฏิเสธ/ยกเลิกคำขออนุมัติ: "${comment}"`,
@@ -2010,7 +2133,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const approvalLog: ApprovalLogEntry = {
-      id: `appr-${Date.now()}`,
+      id: `appr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: nowIso,
       action: 'reject',
       actorName: approverName,
@@ -2062,7 +2185,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const submitter = target?.submittedForApprovalBy || target?.assignedTo || approverName;
 
     const newLog: WorkLogEntry = {
-      id: `log-${Date.now()}`,
+      id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: nowIso,
       author: approverName,
       text: `🔄 ส่งกลับให้แก้ไข: "${revisionComment}"${attachments?.length ? ` (แนบรูป ${attachments.length} รูป)` : ''}`,
@@ -2070,7 +2193,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const approvalLog: ApprovalLogEntry = {
-      id: `appr-${Date.now()}`,
+      id: `appr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: nowIso,
       action: 'revision_request',
       actorName: approverName,
@@ -2119,7 +2242,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Documents Handlers
   const addDocument = (newDocData: Omit<WorkDocument, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const id = `doc-${Date.now()}`;
+    const id = `doc-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     const now = new Date().toISOString();
     const newDoc: WorkDocument = {
       ...newDocData,
@@ -2264,6 +2387,13 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCustomLogo,
         themeColor,
         setThemeColor,
+        isRealtimeConnected,
+        forceSyncFromCloud,
+        notificationPreference,
+        setNotificationPreference,
+        isSoundEnabled,
+        setIsSoundEnabled,
+        playNotificationSound,
       }}
     >
       {!isFirebaseLoaded ? (

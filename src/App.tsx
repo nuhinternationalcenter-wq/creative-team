@@ -116,7 +116,7 @@ function MainAppContent() {
 
 
       {/* Main Viewport */}
-      <main className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 w-full mx-auto px-2 sm:px-6 lg:px-8 py-3 sm:py-6 max-w-full overflow-x-hidden">
 
         {activeTab === 'dashboard' && (
           <div className="space-y-8">

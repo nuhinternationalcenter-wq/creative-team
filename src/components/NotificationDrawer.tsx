@@ -30,11 +30,13 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
     markAllNotificationsAsRead, 
     clearNotifications,
     members,
-    selectedRole 
+    selectedRole,
+    notificationPreference,
+    setNotificationPreference
   } = useWork();
 
   const [filterUnread, setFilterUnread] = useState(false);
-  const [filterMember, setFilterMember] = useState<string>('all');
+  const [filterMember, setFilterMember] = useState<string>(notificationPreference);
 
   if (!isOpen) return null;
 
@@ -131,6 +133,15 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 <option key={m.id} value={m.name}>{m.name} ({m.role})</option>
               ))}
             </select>
+            {filterMember !== notificationPreference && (
+              <button
+                onClick={() => setNotificationPreference(filterMember)}
+                className="px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-[10px] font-bold border border-indigo-200 transition"
+                title="บันทึกค่านี้เป็นค่าเริ่มต้นสำหรับเครื่องนี้"
+              >
+                ตั้งค่าหลัก
+              </button>
+            )}
           </div>
         </div>
 

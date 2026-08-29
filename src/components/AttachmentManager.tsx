@@ -308,7 +308,7 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {attachments.map((att) => {
+          {attachments.filter((att, idx, self) => self.findIndex(a => a.id === att.id) === idx).map((att) => {
             const isImg = att.type === 'image';
             const isLink = att.type === 'link';
 

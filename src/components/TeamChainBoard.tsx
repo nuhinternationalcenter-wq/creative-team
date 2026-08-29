@@ -107,32 +107,37 @@ export const TeamChainBoard: React.FC<TeamChainBoardProps> = ({ onOpenCreateProj
                 </button>
                 
                 {isProjectDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
-                    <div className="max-h-60 overflow-y-auto py-1">
-                      {projects.map((p) => (
-                        <button
-                          key={p.id}
-                          onClick={() => {
-                            setActiveProjectId(p.id);
-                            setIsProjectDropdownOpen(false);
-                          }}
-                          className={`w-full text-left px-4 py-2.5 text-sm transition ${
-                            activeProject.id === p.id ? 'bg-slate-200 font-bold text-slate-900' : 'text-slate-700 hover:bg-slate-100'
-                          }`}
-                        >
-                          {p.title}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="border-t border-slate-100 p-2 space-y-1 bg-slate-50">
-                      {onOpenEditProject && (
-                        <button
-                          onClick={() => {
-                            onOpenEditProject();
-                            setIsProjectDropdownOpen(false);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-white hover:text-slate-900 rounded-lg flex items-center space-x-2 transition font-medium"
-                        >
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setIsProjectDropdownOpen(false)} 
+                    />
+                    <div className="absolute top-full left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+                      <div className="max-h-60 overflow-y-auto py-1">
+                        {projects.map((p) => (
+                          <button
+                            key={p.id}
+                            onClick={() => {
+                              setActiveProjectId(p.id);
+                              setIsProjectDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 text-sm transition ${
+                              activeProject.id === p.id ? 'bg-slate-200 font-bold text-slate-900' : 'text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            {p.title}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="border-t border-slate-100 p-2 space-y-1 bg-slate-50">
+                        {onOpenEditProject && (
+                          <button
+                            onClick={() => {
+                              onOpenEditProject();
+                              setIsProjectDropdownOpen(false);
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-white hover:text-slate-900 rounded-lg flex items-center space-x-2 transition font-medium"
+                          >
                           <Edit3 className="w-4 h-4 text-slate-500" />
                           <span>แก้ไขข้อมูลโปรเจกต์ปัจจุบัน</span>
                         </button>
@@ -151,6 +156,7 @@ export const TeamChainBoard: React.FC<TeamChainBoardProps> = ({ onOpenCreateProj
                       )}
                     </div>
                   </div>
+                </>
                 )}
               </div>
             </div>
