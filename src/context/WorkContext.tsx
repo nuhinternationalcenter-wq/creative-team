@@ -142,6 +142,7 @@ interface WorkContextType {
 
   // System
   resetToDefault: () => void;
+  clearAllSampleData: (keepMembers?: boolean) => void;
   exportData: () => void;
   importData: (jsonData: string) => boolean;
 
@@ -413,16 +414,11 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Firestore real-time sync with onSnapshot
   useEffect(() => {
     let unsubscribe: any;
-    // Safety fallback: Ensure app loads after max 1.5s even if Firebase is slow/blocked
-    const fallbackTimer = setTimeout(() => {
-      setIsFirebaseLoaded(true);
-    }, 1500);
 
     import('../lib/sync').then(({ subscribeToWorkspace }) => {
       unsubscribe = subscribeToWorkspace((data, hasPendingWrites) => {
         setIsFirebaseLoaded(true);
         setIsRealtimeConnected(true);
-        clearTimeout(fallbackTimer);
 
         if (data && !hasPendingWrites) {
           isSnapshotUpdatingRef.current = true;
@@ -487,7 +483,6 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => {
-      clearTimeout(fallbackTimer);
       if (unsubscribe) unsubscribe();
     };
   }, []);
@@ -582,7 +577,8 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Sync to Firestore when local state changes
   useEffect(() => {
-    if (!isFirebaseLoaded) return;
+    // Crucial: never sync back until we are fully loaded from Firestore
+    if (!isFirebaseLoaded || !isRealtimeConnected) return;
     
     if (isSnapshotUpdatingRef.current) {
       isSnapshotUpdatingRef.current = false;
@@ -599,6 +595,12 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       themeColor
     };
     
+    // Double check: if lastServerStateRef is null, it means we haven't actually 
+    // successfully loaded the workspace data yet. To be safe, don't overwrite.
+    if (!lastServerStateRef.current) {
+      return;
+    }
+    
     if (deepEqual(currentState, lastServerStateRef.current)) {
       return;
     }
@@ -608,7 +610,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     import('../lib/sync').then(({ syncToFirestore }) => {
       syncToFirestore(currentState);
     });
-  }, [members, projects, personalTasks, notifications, documents, customLogo, themeColor, isFirebaseLoaded]);
+  }, [members, projects, personalTasks, notifications, documents, customLogo, themeColor, isFirebaseLoaded, isRealtimeConnected]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_ROLE, selectedRole);
@@ -2295,6 +2297,37 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem(STORAGE_KEY_ROLE);
   };
 
+  const clearAllSampleData = (keepMembers: boolean = true) => {
+    if (!keepMembers) {
+      setMembers([]);
+      localStorage.removeItem(STORAGE_KEY_MEMBERS);
+    }
+    setProjects([]);
+    setPersonalTasks([]);
+    setNotifications([]);
+    setDocuments([]);
+    setSelectedRole('all');
+    localStorage.removeItem(STORAGE_KEY_PROJECTS);
+    localStorage.removeItem(STORAGE_KEY_TASKS);
+    localStorage.removeItem(STORAGE_KEY_NOTIFS);
+    localStorage.removeItem(STORAGE_KEY_DOCUMENTS);
+    localStorage.removeItem(STORAGE_KEY_ROLE);
+
+    // Sync clean state to Firestore immediately
+    import('../lib/sync').then(({ updateFirestoreDoc }) => {
+      const payload: any = {
+        projects: [],
+        personalTasks: [],
+        notifications: [],
+        documents: [],
+      };
+      if (!keepMembers) {
+        payload.members = [];
+      }
+      updateFirestoreDoc(payload);
+    });
+  };
+
   const exportData = () => {
     const data = {
       members,
@@ -2381,6 +2414,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateDocument,
         deleteDocument,
         resetToDefault,
+        clearAllSampleData,
         exportData,
         importData,
         customLogo,

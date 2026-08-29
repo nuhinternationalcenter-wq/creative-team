@@ -45,55 +45,47 @@ export const isSameMember = (
   const val = assignedVal.trim().toLowerCase();
   const name = memberName.trim().toLowerCase();
   
+  if (val === 'all' || name === 'all') return false;
   if (val === name) return true;
 
   // If both refer to Lee
-  if (isLeeAlias(val) && (isLeeAlias(name) || memberId === 'lee')) {
+  if (isLeeAlias(val) && isLeeAlias(name)) {
     return true;
   }
 
-  // Pre-defined IDs mapping to catch initial data variations
-  if (memberId === 'lee' || name === 'mr lee' || name === 'แบฟีลี' || name === 'น้องลี') {
-    return isLeeAlias(val);
+  // Pre-defined alias groups where BOTH val and name (or memberId) must match
+  const aliasGroups: { id?: string; aliases: string[] }[] = [
+    { id: 'lee', aliases: ['mr lee', 'mr. lee', 'mr.lee', 'แบฟีลี', 'น้องลี', 'ลี', 'lee'] },
+    { id: 'seng', aliases: ['เซ็ง', 'น้องเซ็ง', 'seng'] },
+    { id: 'demy', aliases: ['เดะมี่', 'demy', 'มี่'] },
+    { id: 'mimi', aliases: ['มีมี่', 'mimi'] },
+    { id: 'fani', aliases: ['ฟานี', 'fani'] },
+    { id: 'mkt', aliases: ['mkt', 'การตลาด', 'marketing'] },
+    { id: 'po', aliases: ['po', 'จัดซื้อ', 'สั่งผลิต', 'procurement'] },
+    { id: 'suri', aliases: ['ซูรี', 'suri'] },
+    { id: 'kafah', aliases: ['กะฟา', 'kafah'] },
+    { id: 'npd', aliases: ['npd', 'product', 'พัฒนาผลิตภัณฑ์'] },
+    { id: 'aim', aliases: ['aim', 'เอม'] }
+  ];
+
+  for (const group of aliasGroups) {
+    const valMatches = (group.id && val === group.id) || group.aliases.some(a => val === a || val.includes(a) || a.includes(val));
+    const nameMatches = (group.id && (name === group.id || memberId === group.id)) || group.aliases.some(a => name === a || name.includes(a) || a.includes(name));
+    
+    // BOTH val and name must match the same alias group
+    if (valMatches && nameMatches) {
+      return true;
+    }
   }
 
-  if (memberId === 'seng' || name.includes('เซ็ง')) {
-    return val === 'เซ็ง' || val === 'น้องเซ็ง' || val === 'seng';
+  // Fallback exact substring match (only if long enough to prevent accidental overlaps)
+  const fuzzyVal = val.replace(/[^a-z0-9ก-ฮ]/gi, '');
+  const fuzzyName = name.replace(/[^a-z0-9ก-ฮ]/gi, '');
+  
+  if (fuzzyVal.length >= 4 && fuzzyName.length >= 4) {
+    if (fuzzyVal === fuzzyName) return true;
   }
 
-  if (memberId === 'demy' || name.includes('เดะมี่')) {
-    return val === 'เดะมี่' || val === 'demy' || val === 'มี่';
-  }
-
-  if (memberId === 'mimi' || name.includes('มีมี่')) {
-    return val === 'มีมี่' || val === 'mimi';
-  }
-
-  if (memberId === 'fani' || name.includes('ฟานี')) {
-    return val === 'ฟานี' || val === 'fani';
-  }
-
-  if (memberId === 'mkt' || name.includes('mkt') || name.includes('การตลาด')) {
-    return val.includes('mkt') || val.includes('การตลาด');
-  }
-
-  if (memberId === 'po' || name.includes('po') || name.includes('จัดซื้อ') || name.includes('สั่งผลิต')) {
-    return val.includes('po') || val.includes('จัดซื้อ') || val.includes('สั่งผลิต');
-  }
-
-  if (memberId === 'suri' || name.includes('ซูรี')) {
-    return val.includes('ซูรี') || val.includes('suri');
-  }
-
-  if (memberId === 'kafah' || name.includes('กะฟา')) {
-    return val.includes('กะฟา') || val.includes('kafah');
-  }
-
-  if (memberId === 'npd' || name.includes('npd')) {
-    return val.includes('npd') || val.includes('product');
-  }
-
-  // Fallback check: removed for stricter matching
   return false;
 };
 

@@ -331,15 +331,28 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
     }
   };
 
+  const selectedMemberObj = members.find((m) => m.name === selectedRole || m.id === selectedRole || (isLeeAlias(selectedRole) && isLeeAlias(m.name)));
+  const currentMemberId = selectedMemberObj ? selectedMemberObj.id : (isLeeAlias(selectedRole) ? 'lee' : '');
+
   const visibleMembers = selectedRole === "all" 
     ? members 
     : members.filter(m => 
         m.name === selectedRole || 
-        m.id === selectedRole
+        m.id === selectedRole ||
+        (isLeeAlias(selectedRole) && isLeeAlias(m.name)) ||
+        isSameMember(m.name, selectedRole, currentMemberId)
       );
+
+  const displayMembers = visibleMembers.length > 0 
+    ? visibleMembers 
+    : (selectedRole === 'all' ? members : members.filter(m => m.name.toLowerCase().includes(selectedRole.toLowerCase()) || isSameMember(m.name, selectedRole)));
+
+  const isSingleMember = displayMembers.length === 1;
   const minColWidth = getColumnMinWidth();
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-  const totalMinWidth = visibleMembers.length * (isMobile && visibleMembers.length === 1 ? window.innerWidth - 32 : minColWidth);
+  const totalMinWidth = isSingleMember 
+    ? (isMobile ? '100%' : '100%') 
+    : `${displayMembers.length * minColWidth}px`;
 
   // Function to toggle role filter
   const toggleRoleFilter = (name: string) => {
@@ -347,8 +360,6 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
       setSelectedRole('all');
     } else {
       setSelectedRole(name);
-      // Wait for re-render then scroll
-      setTimeout(() => scrollToMember(name), 100);
     }
   };
 
@@ -358,23 +369,35 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
       
       {/* Top Filter Indicator (Show only when filtered) */}
       {selectedRole !== 'all' && (
-        <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 p-2.5 rounded-xl animate-in fade-in duration-300">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-sm">
-              <Users className="w-4 h-4" />
+        <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-blue-200/80 p-3 rounded-2xl shadow-xs animate-in fade-in duration-200">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs font-bold shrink-0">
+              👤
             </div>
             <div>
-              <div className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest leading-none">Individual View</div>
-              <div className="text-sm font-bold text-indigo-900 leading-tight">
-                {selectedRole}
+              <div className="text-[11px] text-blue-600 font-bold uppercase tracking-wider">
+                กำลังแสดงเฉพาะตารางงานของ
+              </div>
+              <div className="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                <span>{selectedRole}</span>
+                {selectedMemberObj?.department && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">
+                    {selectedMemberObj.department}
+                  </span>
+                )}
+                {selectedMemberObj?.role && (
+                  <span className="text-xs text-slate-500 font-normal">
+                    ({selectedMemberObj.role})
+                  </span>
+                )}
               </div>
             </div>
           </div>
           <button 
             onClick={() => setSelectedRole('all')}
-            className="px-3 py-1.5 bg-white hover:bg-indigo-600 hover:text-white text-indigo-600 text-xs font-bold rounded-lg border border-indigo-200 transition-all cursor-pointer shadow-2xs flex items-center space-x-1.5"
+            className="px-3.5 py-1.5 bg-white hover:bg-blue-600 hover:text-white text-blue-700 text-xs font-bold rounded-xl border border-blue-200 transition-all cursor-pointer shadow-xs flex items-center space-x-1.5 shrink-0"
           >
-            <span>❌ ล้างตัวกรอง (Clear)</span>
+            <span>👥 ดูตารางทุกคน ({members.length} คน)</span>
           </button>
         </div>
       )}
@@ -489,30 +512,40 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
               <span>ไปยังคน:</span>
             </span>
 
-            {visibleMembers.map((m) => {
+            {members.map((m) => {
               const colorStyle = getMemberColorStyle(m);
               const count = getStepsByRole(m.name).length;
+              // Selected ONLY when selectedRole is NOT 'all' and strictly matches this member
+              const isSelected = selectedRole !== 'all' && (
+                selectedRole === m.name || 
+                selectedRole === m.id || 
+                (isLeeAlias(selectedRole) && isLeeAlias(m.name))
+              );
               return (
                 <button
                   key={m.id}
                   type="button"
                   onClick={() => toggleRoleFilter(m.name)}
-                  className={`shrink-0 flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-sm font-medium border transition cursor-pointer ${
-                    count > 0 
-                      ? `${colorStyle.subtleBg} ${colorStyle.headerBorder} ${colorStyle.headerText} hover:shadow-2xs` 
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                  } ${selectedRole === m.name ? 'ring-2 ring-slate-900 shadow-sm' : ''}`}
+                  className={`shrink-0 flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition cursor-pointer ${
+                    isSelected
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-900/40 ring-offset-1 font-bold'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                  }`}
                   title={`กรองดูคอลัมน์ของ ${m.name} (${m.role})`}
                 >
                   <span 
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: m.color || colorStyle.hex }}
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${isSelected ? 'bg-white' : ''}`}
+                    style={!isSelected ? { backgroundColor: m.color || colorStyle.hex } : undefined}
                   />
-                  <span>{m.name}</span>
+                  <span className={isSelected ? 'text-white' : 'text-slate-800'}>{m.name}</span>
                   {count > 0 && (
                     <span 
-                      className="px-1.5 py-0.2 rounded-full text-xs font-semibold text-white shrink-0"
-                      style={{ backgroundColor: m.color || colorStyle.hex }}
+                      className={`px-1.5 py-0.5 rounded-full text-xs font-semibold shrink-0 ${
+                        isSelected 
+                          ? 'bg-white/20 text-white' 
+                          : 'text-white'
+                      }`}
+                      style={!isSelected ? { backgroundColor: m.color || colorStyle.hex } : undefined}
                     >
                       {count}
                     </span>
@@ -520,6 +553,15 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                 </button>
               );
             })}
+
+            {selectedRole !== 'all' && (
+              <button
+                onClick={() => setSelectedRole('all')}
+                className="shrink-0 px-3 py-1 rounded-lg text-sm font-bold bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition cursor-pointer flex items-center space-x-1"
+              >
+                <span>✨ ดูทุกคน</span>
+              </button>
+            )}
           </div>
 
           {/* Width Mode & Left/Right Scroll Arrow Buttons */}
@@ -698,41 +740,47 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
         </div>
       )}
 
-      {/* Sticky Top Horizontal Scrollbar (Pure sliding scrollbar) */}
-      <div 
-        ref={topScrollRef}
-        onScroll={() => handleScrollSync('top')}
-        className="sticky top-15 z-30 overflow-x-auto bg-slate-200/90 backdrop-blur-md rounded-full h-3 shadow-inner border border-slate-300 mb-3"
-      >
-        <div style={{ width: `${totalMinWidth}px`, height: '1px' }} />
-      </div>
+      {/* Sticky Top Horizontal Scrollbar (Only needed when multiple columns are visible) */}
+      {!isSingleMember && displayMembers.length > 1 && (
+        <div 
+          ref={topScrollRef}
+          onScroll={() => handleScrollSync('top')}
+          className="sticky top-15 z-30 overflow-x-auto bg-slate-200/90 backdrop-blur-md rounded-full h-3 shadow-inner border border-slate-300 mb-3"
+        >
+          <div style={{ width: totalMinWidth, height: '1px' }} />
+        </div>
+      )}
 
       {/* Main Drag-to-Scroll Spreadsheet Columns Board Container */}
       <div 
         ref={scrollContainerRef}
         onScroll={() => handleScrollSync('main')}
-        onMouseDown={handleMouseDown}
-        onMouseLeave={handleMouseLeave}
-        onMouseUp={handleMouseUp}
-        onMouseMove={handleMouseMove}
-        className={`overflow-x-auto overflow-y-auto min-h-[500px] max-h-[calc(100vh-140px)] pb-6 pt-1 transition-all rounded-2xl touch-pan-x ${
-          isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
+        onMouseDown={!isSingleMember ? handleMouseDown : undefined}
+        onMouseLeave={!isSingleMember ? handleMouseLeave : undefined}
+        onMouseUp={!isSingleMember ? handleMouseUp : undefined}
+        onMouseMove={!isSingleMember ? handleMouseMove : undefined}
+        className={`min-h-[500px] pb-6 pt-1 transition-all rounded-2xl ${
+          isSingleMember
+            ? 'w-full max-w-4xl mx-auto'
+            : `overflow-x-auto overflow-y-auto max-h-[calc(100vh-140px)] touch-pan-x ${
+                isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
+              }`
         }`}
-        style={{ 
+        style={!isSingleMember ? { 
           scrollBehavior: isDragging ? 'auto' : 'smooth',
           WebkitOverflowScrolling: 'touch'
-        }}
+        } : undefined}
       >
         <div 
-          className="grid gap-3.5 items-start"
+          className="grid gap-3.5 items-start w-full"
           style={{
-            minWidth: `${totalMinWidth}px`,
-            gridTemplateColumns: visibleMembers.length === 1 
+            minWidth: totalMinWidth,
+            gridTemplateColumns: isSingleMember 
               ? '1fr' 
-              : `repeat(${visibleMembers.length}, minmax(${minColWidth}px, 1fr))`
+              : `repeat(${displayMembers.length}, minmax(${minColWidth}px, 1fr))`
           }}
         >
-          {visibleMembers.map((member) => {
+          {displayMembers.map((member) => {
             const steps = getStepsByRole(member.name);
             const colorStyle = getMemberColorStyle(member);
             const isHighlight = selectedRole !== 'all' && (member.name === selectedRole || member.id === selectedRole);

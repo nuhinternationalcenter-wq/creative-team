@@ -15,7 +15,8 @@ import {
   FileText,
   ShieldCheck,
   Users,
-  Volume2
+  Volume2,
+  Trash2
 } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 
@@ -46,6 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
     setSelectedRole, 
     notifications, 
     resetToDefault,
+    clearAllSampleData,
     exportData,
     importData,
     customLogo,
@@ -497,18 +499,48 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
                   </div>
                   <div className="my-2 border-t border-slate-100"></div>
-                  <div className="px-2">
+                  <div className="px-4 py-1.5 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                    ล้างข้อมูล / เริ่มต้นใหม่
+                  </div>
+                  <div className="px-2 space-y-1">
                     <button
                       onClick={() => {
-                        if (confirm('คุณต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นแม่แบบเริ่มต้นหรือไม่?')) {
+                        if (confirm('คุณต้องการล้างข้อมูลงานตัวอย่างทั้งหมด (คงรายชื่อทีมไว้) เพื่อเริ่มกรอกงานจริงใช่หรือไม่?')) {
+                          clearAllSampleData(true);
+                          setShowSettingsMenu(false);
+                        }
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg text-amber-700 bg-amber-50/70 hover:bg-amber-100/80 flex items-center space-x-2 transition font-medium text-xs"
+                    >
+                      <Trash2 className="w-4 h-4 text-amber-600 shrink-0" />
+                      <div>
+                        <div className="font-bold">ล้างงานตัวอย่าง (เก็บรายชื่อทีม)</div>
+                        <div className="text-[10px] text-amber-600/80">ลบงาน SS26 และงานส่วนตัวออก ให้กระดานว่าง</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('คุณต้องการล้างข้อมูลทั้งหมดรวมรายชื่อทีม (กระดานเปล่า 100%) ใช่หรือไม่?')) {
+                          clearAllSampleData(false);
+                          setShowSettingsMenu(false);
+                        }
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 flex items-center space-x-2 transition font-medium text-xs"
+                    >
+                      <Trash2 className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span>ล้างทั้งหมดรวมรายชื่อทีม (กระดานเปล่า)</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('คุณต้องการโหลดแม่แบบข้อมูลตัวอย่างเริ่มต้น (SS26 Collection) กลับมาหรือไม่?')) {
                           resetToDefault();
                           setShowSettingsMenu(false);
                         }
                       }}
-                      className="w-full text-left px-3 py-2 rounded-lg text-rose-600 hover:bg-rose-50 flex items-center space-x-2 transition font-medium"
+                      className="w-full text-left px-3 py-1.5 rounded-lg text-slate-500 hover:bg-slate-100 flex items-center space-x-2 transition font-medium text-[11px]"
                     >
-                      <RefreshCw className="w-4 h-4" />
-                      <span>รีเซ็ตเป็นข้อมูลตัวอย่างเริ่มต้น</span>
+                      <RefreshCw className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>โหลดแม่แบบตัวอย่าง (SS26 Collection)</span>
                     </button>
                   </div>
                 </div>

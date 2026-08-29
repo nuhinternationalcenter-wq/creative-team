@@ -60,7 +60,11 @@ export const RoleFilterBar: React.FC = () => {
           {/* Member chips */}
           {members.map((m) => {
             const counts = getMemberTaskCounts(m.name, m.id);
-            const isSelected = selectedRole === m.name || selectedRole === m.id || (isLeeAlias(selectedRole) && isLeeAlias(m.name));
+            const isSelected = selectedRole !== 'all' && (
+              selectedRole === m.name || 
+              selectedRole === m.id || 
+              (isLeeAlias(selectedRole) && isLeeAlias(m.name))
+            );
 
             return (
               <button
@@ -68,7 +72,7 @@ export const RoleFilterBar: React.FC = () => {
                 onClick={() => setSelectedRole(m.name)}
                 className={`px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center space-x-1.5 border cursor-pointer ${
                   isSelected
-                    ? 'bg-blue-600 border-blue-600 text-white shadow-sm ring-2 ring-blue-500/30'
+                    ? 'bg-slate-900 border-slate-900 text-white shadow-md ring-2 ring-slate-900/40 ring-offset-1'
                     : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
                 }`}
               >
@@ -76,17 +80,17 @@ export const RoleFilterBar: React.FC = () => {
                   className={`w-2.5 h-2.5 rounded-full shrink-0 ${isSelected ? 'bg-white' : ''}`} 
                   style={!isSelected ? { backgroundColor: m.color || getMemberColorStyle(m).hex } : undefined} 
                 />
-                <span>{m.name}</span>
+                <span className={isSelected ? 'text-white' : 'text-slate-800'}>{m.name}</span>
                 {counts.chainCount > 0 && (
                   <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-bold ${
-                    isSelected ? 'bg-blue-800 text-blue-100' : 'bg-emerald-100 text-emerald-800'
+                    isSelected ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
                   }`} title="งานทีมที่กำลังทำ">
                     {counts.chainCount} 👥
                   </span>
                 )}
                 {counts.personalCount > 0 && (
                   <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-bold ${
-                    isSelected ? 'bg-blue-800 text-blue-100' : 'bg-amber-100 text-amber-800'
+                    isSelected ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'
                   }`} title="งานส่วนตัวที่ยังไม่เสร็จ">
                     {counts.personalCount}
                   </span>
