@@ -1,0 +1,104 @@
+{
+  "collections": [
+    {
+      "name": "members",
+      "description": "Team members",
+      "fields": {
+        "name": "string",
+        "role": "string",
+        "department": "string",
+        "avatarBg": "string",
+        "color": "string",
+        "gradient": "string?",
+        "avatarUrl": "string?"
+      },
+      "rules": {
+        "read": "request.auth != null",
+        "write": "request.auth != null"
+      }
+    },
+    {
+      "name": "projects",
+      "description": "Projects and their steps",
+      "fields": {
+        "title": "string",
+        "code": "string",
+        "category": "string",
+        "description": "string",
+        "startDate": "string",
+        "targetDate": "string",
+        "status": "string",
+        "priority": "string",
+        "progress": "number",
+        "createdAt": "string",
+        "updatedAt": "string",
+        "steps": "array"
+      },
+      "rules": {
+        "read": "request.auth != null",
+        "write": "request.auth != null"
+      }
+    },
+    {
+      "name": "personalTasks",
+      "description": "Personal tasks for members",
+      "fields": {
+        "title": "string",
+        "description": "string?",
+        "category": "string",
+        "priority": "string",
+        "status": "string",
+        "assignedTo": "string",
+        "dueDate": "string",
+        "estimatedMinutes": "number?",
+        "spentMinutes": "number?",
+        "completedAt": "string?",
+        "checklist": "array",
+        "notes": "string?",
+        "tags": "array",
+        "createdAt": "string",
+        "attachments": "array?",
+        "workLogs": "array?",
+        "handedOverTo": "string?",
+        "handedOverFrom": "string?",
+        "handoverComment": "string?",
+        "handoverDate": "string?"
+      },
+      "rules": {
+        "read": "request.auth != null",
+        "write": "request.auth != null"
+      }
+    },
+    {
+      "name": "notifications",
+      "description": "Notifications",
+      "fields": {
+        "type": "string",
+        "title": "string",
+        "message": "string",
+        "timestamp": "string",
+        "read": "boolean",
+        "relatedProjectId": "string?",
+        "relatedStepId": "string?",
+        "relatedTaskId": "string?",
+        "targetRole": "string?"
+      },
+      "rules": {
+        "read": "request.auth != null",
+        "write": "request.auth != null"
+      }
+    },
+    {
+      "name": "settings",
+      "description": "Workspace settings",
+      "fields": {
+        "customLogo": "string?",
+        "themeColor": "string?"
+      },
+      "rules": {
+        "read": "request.auth != null",
+        "write": "request.auth != null"
+      }
+    }
+  ]
+}
