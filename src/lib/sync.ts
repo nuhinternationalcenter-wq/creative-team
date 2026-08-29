@@ -78,6 +78,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 }
 
 let syncTimeout: any;
+let lastSyncedJSON = '';
 
 /**
  * Immediate document update using updateDoc() as requested by user
@@ -97,31 +98,44 @@ export const updateFirestoreDoc = async (updates: Record<string, any>) => {
   }
 };
 
-/**
- * Debounced sync for rapid consecutive local updates
- */
-
-
-let lastLocalWrite = 0;
-
 export const hasPendingSync = () => syncTimeout !== undefined && syncTimeout !== null;
 
+export const setLastSyncedData = (data: any) => {
+  try {
+    lastSyncedJSON = JSON.stringify(removeUndefinedValues(data));
+  } catch (e) {
+    console.error('Failed to stringify lastSyncedData', e);
+  }
+};
+
 export const syncToFirestore = (data: any) => {
+  const cleanData = removeUndefinedValues(data);
+  let dataJSON = '';
+  try {
+    dataJSON = JSON.stringify(cleanData);
+  } catch (e) {
+    console.error('Failed to stringify cleanData', e);
+  }
+
+  if (dataJSON && dataJSON === lastSyncedJSON) {
+    return;
+  }
+  
   if (syncTimeout) clearTimeout(syncTimeout);
   
-  const cleanData = removeUndefinedValues(data);
   const path = `settings/${WORKSPACE_DOC_ID}`;
   
   syncTimeout = setTimeout(async () => {
     syncTimeout = null;
     try {
+      if (dataJSON) lastSyncedJSON = dataJSON;
       await setDoc(doc(db, 'settings', WORKSPACE_DOC_ID), cleanData, { merge: true });
       console.log("Sync to Firestore successful");
     } catch (e: any) {
       console.error("Error syncing to Firestore", e);
       handleFirestoreError(e, OperationType.WRITE, path);
     }
-  }, 300);
+  }, 1000);
 };
 
 /**
@@ -133,9 +147,12 @@ export const subscribeToWorkspace = (callback: (data: any | null, hasPendingWrit
     doc(db, 'settings', WORKSPACE_DOC_ID),
     { includeMetadataChanges: true },
     (docSnap) => {
-      
       if (docSnap.exists()) {
-        callback(docSnap.data(), docSnap.metadata.hasPendingWrites);
+        const snapData = docSnap.data();
+        if (!docSnap.metadata.hasPendingWrites) {
+          setLastSyncedData(snapData);
+        }
+        callback(snapData, docSnap.metadata.hasPendingWrites);
       } else {
         callback(null, false);
       }
