@@ -135,7 +135,7 @@ export const syncToFirestore = (data: any) => {
       console.error("Error syncing to Firestore", e);
       handleFirestoreError(e, OperationType.WRITE, path);
     }
-  }, 1000);
+  }, 150);
 };
 
 /**

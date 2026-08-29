@@ -311,9 +311,8 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       unsubscribe = subscribeToWorkspace((data, hasPendingWrites) => {
         setIsFirebaseLoaded(true);
 
-        // Prevent bouncing: Ignore snapshot if we have a pending debounced local write,
+        // Prevent bouncing: Ignore snapshot if we have a pending debounced local write
         if (hasPendingSync && hasPendingSync()) {
-          console.log('Snapshot ignored due to pending local sync timeout');
           return;
         }
 
@@ -462,6 +461,8 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (deepEqual(currentState, lastServerStateRef.current)) {
       return;
     }
+    
+    lastServerStateRef.current = currentState;
     
     import('../lib/sync').then(({ syncToFirestore }) => {
       syncToFirestore(currentState);
