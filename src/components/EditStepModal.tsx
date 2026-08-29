@@ -84,7 +84,7 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
       assignedRole: assignedRole.trim(),
       assignedPerson: assignedPersonName,
       assignedBy: assignedBy.trim() || undefined,
-      targetProjectId: selectedProjectId || currentProjId,
+      targetProjectId: selectedProjectId,
       dueDate,
       status,
       taskScope,
@@ -148,19 +148,33 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="block text-xs font-bold text-slate-800">
-                  📁 สังกัดโปรเจกต์ (ย้ายโปรเจกต์ย้อนหลัง) *
+                  📁 สังกัดโปรเจกต์ (ย้ายโปรเจกต์หรือลบออก) *
                 </label>
-                <select
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-indigo-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none shadow-xs"
-                >
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      📁 {p.title} ({p.steps.length} สเต็ป)
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center space-x-1.5">
+                  <select
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-indigo-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none shadow-xs"
+                  >
+                    <option value="">-- ไม่สังกัดโปรเจกต์ (ลบออกจากโปรเจกต์) --</option>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        📁 {p.title} ({p.steps.length} สเต็ป)
+                      </option>
+                    ))}
+                  </select>
+                  {selectedProjectId && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProjectId('')}
+                      title="ลบโปรเจกต์ออกจากสเต็ปนี้"
+                      className="px-2.5 py-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl border border-rose-200 transition text-xs font-bold flex items-center space-x-1 shrink-0 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5 text-rose-600" />
+                      <span className="hidden sm:inline">ลบออก</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-1">

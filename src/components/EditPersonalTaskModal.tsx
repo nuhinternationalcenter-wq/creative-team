@@ -261,21 +261,36 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
           </div>
 
           {/* Project & AssignBy Row */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">โปรเจกต์ที่เกี่ยวข้อง (Project)</label>
-              <select
-                value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-500 outline-none"
-              >
-                <option value="">-- ไม่มี (งานส่วนตัวทั่วไป) --</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    📁 {p.title}
-                  </option>
-                ))}
-              </select>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                โปรเจกต์ที่เกี่ยวข้อง (Project)
+              </label>
+              <div className="flex items-center space-x-1.5">
+                <select
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-500 outline-none"
+                >
+                  <option value="">-- ไม่มีโปรเจกต์ (ลบออกจากโปรเจกต์) --</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      📁 {p.title}
+                    </option>
+                  ))}
+                </select>
+                {selectedProjectId && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProjectId('')}
+                    title="ลบโปรเจกต์ออกจากงานนี้"
+                    className="px-2.5 py-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl border border-rose-200 transition text-xs font-bold flex items-center space-x-1 shrink-0 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5 text-rose-600" />
+                    <span className="hidden sm:inline">ลบออก</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             <div>

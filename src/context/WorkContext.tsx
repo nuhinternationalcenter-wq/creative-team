@@ -107,7 +107,8 @@ interface WorkContextType {
     comment: string,
     actionType: 'delegate' | 'complete_and_assign_next',
     newDueDate?: string,
-    newTitle?: string
+    newTitle?: string,
+    newAttachments?: any[]
   ) => void;
 
   // Personal Task Approval operations
@@ -833,7 +834,8 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logDurationMinutes?: number,
     customNextAssignee?: string,
     newStepTitle?: string,
-    newStepDueDate?: string
+    newStepDueDate?: string,
+    newAttachments?: any[]
   ) => {
     try {
       confetti({
@@ -857,7 +859,9 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
             text: handoverComment || 'ส่งมอบงานสำเร็จ',
             durationMinutes: logDurationMinutes,
             type: 'handover',
+            attachments: newAttachments,
           });
+          const combinedAtts = newAttachments ? [...(t.attachments || []), ...newAttachments] : t.attachments;
           return {
             ...t,
             status: customNextAssignee ? 'in_progress' : 'completed',
@@ -866,6 +870,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
             title: newStepTitle || t.title,
             dueDate: newStepDueDate || t.dueDate,
             notes: handoverComment || t.notes,
+            attachments: combinedAtts,
             workLogs: targetLogs,
           };
         })
@@ -890,6 +895,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           text: handoverComment || 'ส่งมอบงานในกระบวนการลูกโซ่สำเร็จ',
           durationMinutes: logDurationMinutes,
           type: 'handover',
+          attachments: newAttachments,
         });
 
         // Track which steps become completed
@@ -905,12 +911,14 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const updatedSteps = proj.steps.map((s) => {
           if (s.id === stepId) {
+            const combinedAtts = newAttachments ? [...(s.attachments || []), ...newAttachments] : s.attachments;
             return {
               ...s,
               status: 'completed' as StepStatus,
               completedAt: new Date().toISOString(),
               handoverComment: handoverComment || s.handoverComment,
               handedOverTo: customNextAssignee || s.handedOverTo,
+              attachments: combinedAtts,
               workLogs: targetLogs,
             };
           }
@@ -919,12 +927,14 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (s.status === 'pending' && s.dependencies.length > 0) {
             const allDepsCompleted = s.dependencies.every((depId) => completedStepIds.has(depId));
             if (allDepsCompleted) {
+              const combinedAtts = newAttachments ? [...(s.attachments || []), ...newAttachments] : s.attachments;
               const updatedStep: ChainStep = {
                 ...s,
                 status: 'in_progress' as StepStatus,
                 startDate: s.startDate || new Date().toISOString().split('T')[0],
                 handedOverFrom: targetStep.assignedRole,
                 handoverComment: handoverComment || s.handoverComment,
+                attachments: combinedAtts,
               };
               if (customNextAssignee) {
                 updatedStep.assignedRole = customNextAssignee;
@@ -938,7 +948,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return s;
         });
 
-        // 2.1 If a custom recipient (e.g. แบฟีลี) was selected, and no dependent step was unlocked for them,
+        // 2.1 If a custom recipient was selected, and no dependent step was unlocked for them,
         // create a new active step in their column immediately!
         if (customNextAssignee) {
           const hasUnlockedForRecipient = newlyUnlockedSteps.some(
@@ -961,6 +971,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
               branch: targetStep.branch || 'main',
               handedOverFrom: targetStep.assignedRole,
               handoverComment: handoverComment,
+              attachments: newAttachments || targetStep.attachments || [],
               estimatedHours: 4,
               workLogs: [
                 {
@@ -969,6 +980,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   author: targetStep.assignedRole,
                   text: `ส่งมอบงานให้ ${customNextAssignee}: ${handoverComment}`,
                   type: 'handover',
+                  attachments: newAttachments,
                 },
               ],
             };
@@ -1087,6 +1099,56 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     const { targetProjectId, ...stepUpdates } = updates;
+
+    if (targetProjectId === '') {
+      // User explicitly cleared project association -> Remove step from project & add to personal tasks as unassigned task
+      let stepToMove: ChainStep | null = null;
+      setProjects((prev) => {
+        return prev.map((proj) => {
+          const found = proj.steps.find((s) => s.id === stepId);
+          if (found) {
+            stepToMove = { ...found, ...stepUpdates };
+          }
+          return {
+            ...proj,
+            steps: proj.steps.filter((s) => s.id !== stepId),
+            updatedAt: new Date().toISOString(),
+          };
+        });
+      });
+
+      setPersonalTasks((prev) => {
+        const existingIndex = prev.findIndex((t) => t.id === stepId);
+        if (existingIndex >= 0) {
+          return prev.map((t) => {
+            if (t.id !== stepId) return t;
+            const updated = { ...t, ...stepUpdates };
+            delete updated.projectId;
+            return updated;
+          });
+        }
+        // Convert project step into PersonalTask
+        const createdTask: PersonalTask = {
+          id: stepId,
+          title: stepUpdates.title || 'งานทั่วไป',
+          description: stepUpdates.description || '',
+          category: 'ทั่วไป',
+          priority: 'medium',
+          status: (stepUpdates.status === 'pending' ? 'todo' : stepUpdates.status) as any,
+          assignedTo: stepUpdates.assignedPerson || stepUpdates.assignedRole || 'มีมี่',
+          dueDate: stepUpdates.dueDate || new Date().toISOString().split('T')[0],
+          checklist: [],
+          tags: [],
+          createdAt: new Date().toISOString(),
+          attachments: stepUpdates.attachments || [],
+          notes: stepUpdates.handoverComment,
+        };
+        return [createdTask, ...prev];
+      });
+
+      return;
+    }
+
     setProjects((prev) => {
       let stepToMove: ChainStep | null = null;
       let currentProjId: string = projectId;
@@ -1626,7 +1688,8 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     comment: string,
     actionType: 'delegate' | 'complete_and_assign_next',
     newDueDate?: string,
-    newTitle?: string
+    newTitle?: string,
+    newAttachments?: any[]
   ) => {
     try {
       confetti({
@@ -1649,6 +1712,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setPersonalTasks((prev) => {
         const updatedOriginal = prev.map((t) => {
           if (t.id !== taskId) return t;
+          const combinedAtts = newAttachments ? [...(t.attachments || []), ...newAttachments] : t.attachments;
           return {
             ...t,
             status: 'in_progress' as const,
@@ -1656,6 +1720,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
             handedOverTo: targetAssignee,
             handoverComment: comment,
             handoverDate: nowIso,
+            attachments: combinedAtts,
             workLogs: [
               ...(t.workLogs || []),
               {
@@ -1664,6 +1729,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 author,
                 text: `ส่งต่องานให้คุณ ${targetAssignee}: "${comment}"`,
                 type: 'handover' as const,
+                attachments: newAttachments,
               },
             ],
           };
@@ -1678,6 +1744,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           priority: currentTask.priority,
           status: 'todo',
           assignedTo: targetAssignee,
+          projectId: currentTask.projectId,
           dueDate: newDueDate || currentTask.dueDate,
           checklist: [],
           tags: [...currentTask.tags, 'งานส่งต่อ'],
@@ -1685,6 +1752,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           handedOverFrom: author,
           handoverComment: comment,
           handoverDate: nowIso,
+          attachments: newAttachments || currentTask.attachments || [],
           workLogs: [
             {
               id: `log-${Date.now() + 1}`,
@@ -1692,6 +1760,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
               author: 'ระบบ',
               text: `ได้รับงานส่งต่อจากคุณ ${author}`,
               type: 'handover' as const,
+              attachments: newAttachments,
             },
           ],
         };
@@ -1703,6 +1772,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setPersonalTasks((prev) =>
         prev.map((t) => {
           if (t.id !== taskId) return t;
+          const combinedAtts = newAttachments ? [...(t.attachments || []), ...newAttachments] : t.attachments;
           return {
             ...t,
             assignedTo: targetAssignee,
@@ -1710,6 +1780,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
             handoverComment: comment,
             handoverDate: nowIso,
             dueDate: newDueDate || t.dueDate,
+            attachments: combinedAtts,
             workLogs: [
               ...(t.workLogs || []),
               {
@@ -1718,6 +1789,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 author,
                 text: `ส่งมอบความรับผิดชอบให้คุณ ${targetAssignee}: "${comment}"`,
                 type: 'handover' as const,
+                attachments: newAttachments,
               },
             ],
           };

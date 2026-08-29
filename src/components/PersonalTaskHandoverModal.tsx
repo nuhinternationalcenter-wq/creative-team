@@ -9,10 +9,12 @@ import {
   ArrowRight,
   Bell,
   Sparkles,
-  Users
+  Users,
+  Paperclip
 } from 'lucide-react';
-import { PersonalTask } from '../types';
+import { PersonalTask, TaskAttachment } from '../types';
 import { useWork } from '../context/WorkContext';
+import { AttachmentManager } from './AttachmentManager';
 
 interface PersonalTaskHandoverModalProps {
   task: PersonalTask | null;
@@ -32,6 +34,7 @@ export const PersonalTaskHandoverModal: React.FC<PersonalTaskHandoverModalProps>
   const [actionType, setActionType] = useState<'complete_and_assign_next' | 'delegate'>('complete_and_assign_next');
   const [newDueDate, setNewDueDate] = useState<string>('');
   const [newTitle, setNewTitle] = useState<string>('');
+  const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   // Set default recipient and dates when task opens
@@ -44,6 +47,7 @@ export const PersonalTaskHandoverModal: React.FC<PersonalTaskHandoverModalProps>
       setNewTitle(`${task.title} (ส่งต่อจาก ${task.assignedTo})`);
       setComment('');
       setActionType('complete_and_assign_next');
+      setAttachments(task.attachments || []);
     }
   }, [task, members, isOpen]);
 
@@ -60,7 +64,8 @@ export const PersonalTaskHandoverModal: React.FC<PersonalTaskHandoverModalProps>
       comment.trim() || `ส่งต่องาน "${task.title}" ให้คุณ ${selectedRecipient} รับผิดชอบต่อ`,
       actionType,
       newDueDate,
-      newTitle
+      newTitle,
+      attachments
     );
     setSubmitting(false);
     onClose();
@@ -231,6 +236,18 @@ export const PersonalTaskHandoverModal: React.FC<PersonalTaskHandoverModalProps>
               onChange={(e) => setComment(e.target.value)}
               placeholder="เช่น สิ่งที่ทำเสร็จ ลิงก์ไฟล์งาน โฟลเดอร์งาน หรือสิ่งที่ต้องการให้เพื่อนทำต่อ..."
               className="w-full text-xs sm:text-sm p-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+
+          {/* Attachments Section */}
+          <div className="space-y-1.5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+            <label className="block text-xs font-bold text-slate-800 flex items-center space-x-1.5">
+              <Paperclip className="w-3.5 h-3.5 text-blue-600" />
+              <span>แนบไฟล์ รูปภาพ หรือลิงก์ประกอบการส่งมอบงาน:</span>
+            </label>
+            <AttachmentManager
+              attachments={attachments}
+              onChange={setAttachments}
             />
           </div>
 

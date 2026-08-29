@@ -11,10 +11,12 @@ import {
   Bell,
   Calendar,
   Layers,
-  Check
+  Check,
+  Paperclip
 } from 'lucide-react';
-import { ChainStep, TeamChainProject } from '../types';
+import { ChainStep, TeamChainProject, TaskAttachment } from '../types';
 import { useWork } from '../context/WorkContext';
+import { AttachmentManager } from './AttachmentManager';
 
 interface StepHandoverModalProps {
   step: ChainStep | null;
@@ -40,9 +42,10 @@ export const StepHandoverModal: React.FC<StepHandoverModalProps> = ({
     d.setDate(d.getDate() + 2);
     return d.toISOString().split('T')[0];
   });
+  const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  // When modal opens or step changes, set initial recipient and title
+  // When modal opens or step changes, set initial recipient, title, and reset attachments
   useEffect(() => {
     if (step && project) {
       const nextSteps = project.steps.filter((s) => s.dependencies.includes(step.id));
@@ -60,6 +63,7 @@ export const StepHandoverModal: React.FC<StepHandoverModalProps> = ({
         }
       }
       setHandoverComment('');
+      setAttachments(step.attachments || []);
     }
   }, [step, project, members]);
 
@@ -80,7 +84,8 @@ export const StepHandoverModal: React.FC<StepHandoverModalProps> = ({
       Number(durationMinutes) || 0,
       targetRecipient,
       nextTaskTitle.trim() || undefined,
-      nextDueDate
+      nextDueDate,
+      attachments
     );
     setSubmitting(false);
     onClose();
@@ -173,6 +178,18 @@ export const StepHandoverModal: React.FC<StepHandoverModalProps> = ({
               onChange={(e) => setHandoverComment(e.target.value)}
               placeholder={`เช่น "ทำวิดีโอส่วนของฉันเสร็จแล้ว ช่วย Mr Lee รีทัชรูป Lookbook ชุดสีน้ำเงิน 10 ภาพ และเตรียมภาพปกให้เสร็จภายในวันศุกร์ (ไฟล์อยู่ใน Drive โฟลเดอร์ SS26)"`}
               className="w-full text-xs sm:text-sm p-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition outline-none leading-relaxed"
+            />
+          </div>
+
+          {/* Attachments Section */}
+          <div className="space-y-1.5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+            <label className="block text-xs font-bold text-slate-800 flex items-center space-x-1.5">
+              <Paperclip className="w-3.5 h-3.5 text-emerald-600" />
+              <span>แนบไฟล์ รูปภาพ หรือลิงก์ประกอบการส่งมอบงาน:</span>
+            </label>
+            <AttachmentManager
+              attachments={attachments}
+              onChange={setAttachments}
             />
           </div>
 

@@ -23,7 +23,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   onClose,
   projectToEdit,
 }) => {
-  const { createProject, updateProject, activeProject, addCustomStep, members } = useWork();
+  const { createProject, updateProject, deleteProject, activeProject, addCustomStep, members } = useWork();
 
   const [mode, setMode] = useState<'new_project' | 'add_step'>('new_project');
 
@@ -318,21 +318,38 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               </label>
             )}
 
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-xl"
-              >
-                ยกเลิก
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-md transition flex items-center space-x-1.5"
-              >
-                {projectToEdit ? <Edit3 className="w-3.5 h-3.5" /> : null}
-                <span>{projectToEdit ? 'บันทึกการแก้ไข' : 'สร้างโปรเจกต์ใหม่'}</span>
-              </button>
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              {projectToEdit ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบโปรเจกต์ "${projectToEdit.title}"?`)) {
+                      deleteProject(projectToEdit.id);
+                      onClose();
+                    }
+                  }}
+                  className="px-3.5 py-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl text-xs font-bold transition flex items-center space-x-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>ลบโปรเจกต์นี้</span>
+                </button>
+              ) : <div />}
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-xl font-medium"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-md transition flex items-center space-x-1.5"
+                >
+                  {projectToEdit ? <Edit3 className="w-3.5 h-3.5" /> : null}
+                  <span>{projectToEdit ? 'บันทึกการแก้ไข' : 'สร้างโปรเจกต์ใหม่'}</span>
+                </button>
+              </div>
             </div>
 
           </form>
