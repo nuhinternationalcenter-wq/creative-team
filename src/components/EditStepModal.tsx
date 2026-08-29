@@ -28,8 +28,10 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
   onClose,
   step,
 }) => {
-  const { activeProject, members, updateStepDetails, deleteStep } = useWork();
+  const { activeProject, projects, members, updateStepDetails, deleteStep } = useWork();
 
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [assignedBy, setAssignedBy] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assignedRole, setAssignedRole] = useState('');
@@ -44,6 +46,9 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
 
   useEffect(() => {
     if (step) {
+      const parentProj = projects.find((p) => p.steps.some((s) => s.id === step.id)) || activeProject;
+      setSelectedProjectId(parentProj?.id || activeProject?.id || '');
+      setAssignedBy(step.assignedBy || '');
       setTitle(step.title || '');
       setDescription(step.description || '');
       setAssignedRole(step.assignedRole || 'ฟานี');
@@ -56,7 +61,7 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
       setCardColor(step.color || '');
       setShowDeleteConfirm(false);
     }
-  }, [step, isOpen]);
+  }, [step, isOpen, projects, activeProject]);
 
   if (!isOpen || !step || !activeProject) return null;
 
@@ -73,6 +78,8 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
       description: description.trim(),
       assignedRole: assignedRole.trim(),
       assignedPerson: assignedPersonName,
+      assignedBy: assignedBy.trim() || undefined,
+      targetProjectId: selectedProjectId || activeProject.id,
       dueDate,
       status,
       taskScope,
@@ -126,6 +133,51 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
         {/* Edit Form */}
         <form onSubmit={handleSave} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           
+          {/* Highlighted Project & Assigner Control Box */}
+          <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-indigo-200 rounded-2xl space-y-3 shadow-xs">
+            <div className="flex items-center space-x-2 text-indigo-950 font-bold text-xs border-b border-indigo-100 pb-2">
+              <Sparkles className="w-4 h-4 text-indigo-600" />
+              <span>จัดการสังกัดโปรเจกต์และผู้สั่งงาน (Project & Assigner Settings)</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-800">
+                  📁 สังกัดโปรเจกต์ (ย้ายโปรเจกต์ย้อนหลัง) *
+                </label>
+                <select
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-indigo-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none shadow-xs"
+                >
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      📁 {p.title} ({p.steps.length} สเต็ป)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-800">
+                  👤 ผู้มอบหมายงาน / คนสั่งงาน
+                </label>
+                <select
+                  value={assignedBy}
+                  onChange={(e) => setAssignedBy(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-indigo-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none shadow-xs"
+                >
+                  <option value="">-- ไม่ระบุ --</option>
+                  {members.map((m) => (
+                    <option key={'assigner-' + m.id} value={m.name}>
+                      👤 {m.name} ({m.role || m.department})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
           {/* Task Scope: Team vs Personal */}
           <div className="space-y-1">
             <label className="block text-xs font-bold text-slate-700">ประเภทงาน *</label>

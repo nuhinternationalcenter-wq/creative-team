@@ -785,7 +785,7 @@ export const PersonalTasksView: React.FC<PersonalTasksViewProps> = ({
                         {/* Badges Header */}
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-xs px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-bold border border-slate-200/60">
-                            👤 {task.assignedTo}
+                            👤 {task.assignedTo} {task.assignedBy ? `(จาก: ${task.assignedBy})` : ''}
                           </span>
                           
                           <span className="text-xs px-2.5 py-0.5 rounded-lg bg-blue-50 text-blue-700 font-semibold border border-blue-100">
@@ -1292,7 +1292,7 @@ export const PersonalTasksView: React.FC<PersonalTasksViewProps> = ({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                        👤 {task.assignedTo}
+                        👤 {task.assignedTo} {task.assignedBy ? `(จาก: ${task.assignedBy})` : ''}
                       </span>
                       {getPriorityBadge(task.priority)}
                     </div>
@@ -1357,7 +1357,7 @@ export const PersonalTasksView: React.FC<PersonalTasksViewProps> = ({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded">
-                        👤 {task.assignedTo}
+                        👤 {task.assignedTo} {task.assignedBy ? `(จาก: ${task.assignedBy})` : ''}
                       </span>
                       {getPriorityBadge(task.priority)}
                     </div>
@@ -1432,7 +1432,7 @@ export const PersonalTasksView: React.FC<PersonalTasksViewProps> = ({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
-                        👤 {task.assignedTo}
+                        👤 {task.assignedTo} {task.assignedBy ? `(จาก: ${task.assignedBy})` : ''}
                       </span>
                       <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded">
                         ⏳ รออนุมัติ
@@ -1488,7 +1488,7 @@ export const PersonalTasksView: React.FC<PersonalTasksViewProps> = ({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                        👤 {task.assignedTo}
+                        👤 {task.assignedTo} {task.assignedBy ? `(จาก: ${task.assignedBy})` : ''}
                       </span>
                       <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded">
                         ✓ เสร็จแล้ว

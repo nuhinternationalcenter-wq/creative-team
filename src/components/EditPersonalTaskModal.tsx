@@ -27,8 +27,10 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
   onClose,
   task,
 }) => {
-  const { members, updatePersonalTask, deletePersonalTask } = useWork();
+  const { members, projects, updatePersonalTask, deletePersonalTask } = useWork();
 
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [assignedBy, setAssignedBy] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('งานประจำวัน');
@@ -47,6 +49,8 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
 
   useEffect(() => {
     if (task) {
+      setSelectedProjectId(task.projectId || '');
+      setAssignedBy(task.assignedBy || '');
       setTitle(task.title || '');
       setDescription(task.description || '');
       setCategory(task.category || 'งานประจำวัน');
@@ -110,6 +114,8 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
       priority,
       status,
       assignedTo,
+      assignedBy: assignedBy.trim() || undefined,
+      projectId: selectedProjectId || undefined,
       dueDate,
       estimatedMinutes: Number(estimatedMinutes) || 0,
       notes: notes.trim(),
@@ -250,6 +256,41 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
                 <option value="medium">🟡 ปานกลาง (Medium)</option>
                 <option value="high">🔴 สำคัญ (High)</option>
                 <option value="urgent">🔥 ด่วนมาก (Urgent)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Project & AssignBy Row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">โปรเจกต์ที่เกี่ยวข้อง (Project)</label>
+              <select
+                value={selectedProjectId}
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-500 outline-none"
+              >
+                <option value="">-- ไม่มี (งานส่วนตัวทั่วไป) --</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    📁 {p.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">ผู้มอบหมายงาน (Assigned By)</label>
+              <select
+                value={assignedBy}
+                onChange={(e) => setAssignedBy(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-500 outline-none"
+              >
+                <option value="">-- ไม่ระบุ --</option>
+                {members.map((m) => (
+                  <option key={'assigner-' + m.id} value={m.name}>
+                    👤 {m.name} ({m.role || m.department})
+                  </option>
+                ))}
               </select>
             </div>
           </div>

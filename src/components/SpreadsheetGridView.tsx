@@ -876,6 +876,17 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                                 <span>ผ่านอนุมัติ</span>
                               </span>
                             ) : null}
+
+                            {/* Assigned By Badge */}
+                            {step.assignedBy && (
+                              <span 
+                                className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200 text-[10px] font-bold flex items-center space-x-1 shrink-0" 
+                                title={`มอบหมายงานโดย: ${step.assignedBy}`}
+                              >
+                                <User className="w-3 h-3 text-indigo-600" />
+                                <span>จาก: {step.assignedBy}</span>
+                              </span>
+                            )}
                           </div>
 
                           <div className="flex items-center space-x-1 shrink-0">

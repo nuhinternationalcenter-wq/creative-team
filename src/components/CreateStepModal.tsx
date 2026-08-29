@@ -37,7 +37,8 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
   const [taskScope, setTaskScope] = useState<'team' | 'personal'>('team');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [assignedRole, setAssignedRole] = useState(() => defaultRole || (members[0]?.name || 'ฟานี'));
+  const [assignedRole, setAssignedRole] = useState(() => defaultRole || (members[0]?.name || "ฟานี"));
+  const [assignedBy, setAssignedBy] = useState("");
   const [status, setStatus] = useState<StepStatus>('in_progress');
   const [startDate, setStartDate] = useState(() => {
     return new Date().toISOString().split('T')[0];
@@ -88,6 +89,7 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
       stepNumber: nextStepNum,
       title: title.trim(),
       description: description.trim() || undefined,
+      assignedBy: assignedBy || undefined,
       assignedRole,
       assignedPerson: assignedPersonName,
       status,
@@ -260,6 +262,26 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
           </div>
 
           {/* Title */}
+          
+          {/* Assigned By */}
+          <div className="space-y-1 mt-2">
+            <label className="flex justify-between items-center text-xs font-bold text-slate-700">
+              <span>ผู้มอบหมายงาน (ถ้ามี):</span>
+            </label>
+            <select
+              value={assignedBy}
+              onChange={(e) => setAssignedBy(e.target.value)}
+              className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white font-medium outline-none"
+            >
+              <option value="">-- ไม่ระบุ --</option>
+              {members.map((m) => (
+                <option key={'assigner-'+m.id} value={m.name}>
+                  👤 {m.name} ({m.role || m.department})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="space-y-1">
             <label className="block text-xs font-bold text-slate-700">
               ชื่องาน / กิจกรรมที่ต้องทำ <span className="text-rose-500">*</span>

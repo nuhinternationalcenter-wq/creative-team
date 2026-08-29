@@ -100,13 +100,20 @@ export const updateFirestoreDoc = async (updates: Record<string, any>) => {
 /**
  * Debounced sync for rapid consecutive local updates
  */
+
+
+let lastLocalWrite = 0;
+
+export const hasPendingSync = () => syncTimeout !== undefined && syncTimeout !== null;
+
 export const syncToFirestore = (data: any) => {
   if (syncTimeout) clearTimeout(syncTimeout);
   
   const cleanData = removeUndefinedValues(data);
+  const path = `settings/${WORKSPACE_DOC_ID}`;
+  
   syncTimeout = setTimeout(async () => {
-    console.log("Syncing to Firestore triggered");
-    const path = `settings/${WORKSPACE_DOC_ID}`;
+    syncTimeout = null;
     try {
       await setDoc(doc(db, 'settings', WORKSPACE_DOC_ID), cleanData, { merge: true });
       console.log("Sync to Firestore successful");
@@ -114,7 +121,7 @@ export const syncToFirestore = (data: any) => {
       console.error("Error syncing to Firestore", e);
       handleFirestoreError(e, OperationType.WRITE, path);
     }
-  }, 200);
+  }, 300);
 };
 
 /**
@@ -126,6 +133,7 @@ export const subscribeToWorkspace = (callback: (data: any | null, hasPendingWrit
     doc(db, 'settings', WORKSPACE_DOC_ID),
     { includeMetadataChanges: true },
     (docSnap) => {
+      
       if (docSnap.exists()) {
         callback(docSnap.data(), docSnap.metadata.hasPendingWrites);
       } else {

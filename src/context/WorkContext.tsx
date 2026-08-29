@@ -62,7 +62,11 @@ interface WorkContextType {
     newAttachments?: any[]
   ) => void;
   addStepLog: (projectId: string, stepId: string, log: Omit<WorkLogEntry, 'id' | 'timestamp'>) => void;
-  updateStepDetails: (projectId: string, stepId: string, updates: Partial<ChainStep>) => void;
+  updateStepDetails: (
+    projectId: string,
+    stepId: string,
+    updates: Partial<ChainStep> & { targetProjectId?: string }
+  ) => void;
   addCustomStep: (projectId: string, newStep: Omit<ChainStep, 'id'>) => void;
   deleteStep: (projectId: string, stepId: string) => void;
   clearProjectSteps: (projectId: string) => void;
@@ -171,6 +175,79 @@ function deepEqual(obj1: any, obj2: any): boolean {
     if (!keys2.includes(key) || !deepEqual(obj1[key], obj2[key])) return false;
   }
   return true;
+}
+
+function mergeProjects(localProjects: TeamChainProject[], serverProjects: TeamChainProject[]): TeamChainProject[] {
+  if (!serverProjects || serverProjects.length === 0) return localProjects || [];
+  if (!localProjects || localProjects.length === 0) return serverProjects || [];
+
+  const projectMap = new Map<string, TeamChainProject>();
+
+  for (const sProj of serverProjects) {
+    if (!sProj || !sProj.id) continue;
+    projectMap.set(sProj.id, { ...sProj, steps: [...(sProj.steps || [])] });
+  }
+
+  for (const lProj of localProjects) {
+    if (!lProj || !lProj.id) continue;
+    if (!projectMap.has(lProj.id)) {
+      projectMap.set(lProj.id, lProj);
+    } else {
+      const existing = projectMap.get(lProj.id)!;
+      const stepMap = new Map<string, ChainStep>();
+
+      for (const sStep of existing.steps || []) {
+        if (sStep && sStep.id) stepMap.set(sStep.id, sStep);
+      }
+
+      for (const lStep of lProj.steps || []) {
+        if (!lStep || !lStep.id) continue;
+        if (!stepMap.has(lStep.id)) {
+          stepMap.set(lStep.id, lStep);
+        } else {
+          const sStep = stepMap.get(lStep.id)!;
+          const mergedLogs = [...(sStep.workLogs || [])];
+          for (const log of lStep.workLogs || []) {
+            if (!mergedLogs.some(l => l.id === log.id)) {
+              mergedLogs.push(log);
+            }
+          }
+          stepMap.set(lStep.id, {
+            ...sStep,
+            ...lStep,
+            workLogs: mergedLogs,
+            attachments: lStep.attachments?.length ? lStep.attachments : sStep.attachments,
+          });
+        }
+      }
+
+      existing.steps = Array.from(stepMap.values()).sort((a, b) => a.stepNumber - b.stepNumber);
+      projectMap.set(lProj.id, existing);
+    }
+  }
+
+  return Array.from(projectMap.values());
+}
+
+function mergePersonalTasks(localTasks: PersonalTask[], serverTasks: PersonalTask[]): PersonalTask[] {
+  if (!serverTasks || serverTasks.length === 0) return localTasks || [];
+  if (!localTasks || localTasks.length === 0) return serverTasks || [];
+
+  const taskMap = new Map<string, PersonalTask>();
+  for (const sTask of serverTasks) {
+    if (sTask && sTask.id) taskMap.set(sTask.id, sTask);
+  }
+  for (const lTask of localTasks) {
+    if (lTask && lTask.id) {
+      if (!taskMap.has(lTask.id)) {
+        taskMap.set(lTask.id, lTask);
+      } else {
+        const sTask = taskMap.get(lTask.id)!;
+        taskMap.set(lTask.id, { ...sTask, ...lTask });
+      }
+    }
+  }
+  return Array.from(taskMap.values());
 }
 
 export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -302,9 +379,18 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Firestore real-time sync with onSnapshot
   useEffect(() => {
     let unsubscribe: any;
-    import('../lib/sync').then(({ subscribeToWorkspace }) => {
+    import('../lib/sync').then(({ subscribeToWorkspace, hasPendingSync }) => {
       unsubscribe = subscribeToWorkspace((data, hasPendingWrites) => {
         setIsFirebaseLoaded(true);
+        
+        
+
+        // Prevent bouncing: Ignore snapshot if we have a pending debounced local write,
+        if (hasPendingSync && hasPendingSync()) {
+          console.log('Snapshot ignored due to pending local sync timeout');
+          return;
+        }
+
         if (data && !hasPendingWrites) {
           const migrated = migrateAllDataToMrLee({
             members: data.members,
@@ -324,9 +410,13 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
             themeColor: data.themeColor !== undefined ? data.themeColor : 'slate'
           };
           
-          if (migrated.members) setMembers(migrated.members);
-          if (migrated.projects) setProjects(migrated.projects);
-          if (migrated.personalTasks) setPersonalTasks(migrated.personalTasks);
+          if (migrated.members && migrated.members.length > 0) setMembers(migrated.members);
+          if (migrated.projects && migrated.projects.length > 0) {
+            setProjects((prev) => mergeProjects(prev, migrated.projects!));
+          }
+          if (migrated.personalTasks && migrated.personalTasks.length > 0) {
+            setPersonalTasks((prev) => mergePersonalTasks(prev, migrated.personalTasks!));
+          }
           if (migrated.notifications) setNotifications(migrated.notifications);
           if (migrated.documents) setDocuments(migrated.documents);
           if (data.customLogo !== undefined) setCustomLogoState(data.customLogo);
@@ -885,18 +975,59 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
-  const updateStepDetails = (projectId: string, stepId: string, updates: Partial<ChainStep>) => {
-    setProjects((prev) =>
-      prev.map((proj) => {
+  const updateStepDetails = (
+    projectId: string,
+    stepId: string,
+    updates: Partial<ChainStep> & { targetProjectId?: string }
+  ) => {
+    const { targetProjectId, ...stepUpdates } = updates;
+    setProjects((prev) => {
+      const sourceProj = prev.find((p) => p.steps.some((s) => s.id === stepId)) || prev.find((p) => p.id === projectId);
+      const currentProjId = sourceProj ? sourceProj.id : projectId;
+
+      if (targetProjectId && targetProjectId !== currentProjId) {
+        let stepToMove: ChainStep | null = null;
+        const newProjects = prev.map((proj) => {
+          if (proj.id === currentProjId) {
+            const found = proj.steps.find((s) => s.id === stepId);
+            if (found) {
+              stepToMove = { ...found, ...stepUpdates };
+            }
+            return {
+              ...proj,
+              steps: proj.steps.filter((s) => s.id !== stepId),
+              updatedAt: new Date().toISOString(),
+            };
+          }
+          return proj;
+        });
+
+        if (stepToMove) {
+          return newProjects.map((proj) => {
+            if (proj.id === targetProjectId) {
+              const maxStepNum = proj.steps.reduce((max, s) => Math.max(max, s.stepNumber), 0);
+              return {
+                ...proj,
+                steps: [...proj.steps, { ...(stepToMove as ChainStep), stepNumber: maxStepNum + 1 }],
+                updatedAt: new Date().toISOString(),
+              };
+            }
+            return proj;
+          });
+        }
+        return newProjects;
+      }
+
+      return prev.map((proj) => {
         const hasStep = proj.steps.some((s) => s.id === stepId);
-        if (proj.id !== projectId && !hasStep) return proj;
+        if (proj.id !== currentProjId && !hasStep) return proj;
         return {
           ...proj,
-          steps: proj.steps.map((step) => (step.id === stepId ? { ...step, ...updates } : step)),
+          steps: proj.steps.map((step) => (step.id === stepId ? { ...step, ...stepUpdates } : step)),
           updatedAt: new Date().toISOString(),
         };
-      })
-    );
+      });
+    });
   };
 
   const addCustomStep = (projectId: string, newStep: Omit<ChainStep, 'id'>) => {

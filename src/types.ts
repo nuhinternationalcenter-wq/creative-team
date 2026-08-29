@@ -52,6 +52,7 @@ export interface ChainStep {
   stepNumber: number;
   title: string;
   description?: string;
+  assignedBy?: string; // ผู้มอบหมายงาน
   assignedRole: string; // e.g. "มีมี่", "MKT", "NPD", "PO", "เดะมี่", "ฟานี", "น้องเซ็ง", "Mr Lee", "ซูรี", "กะฟา", "GM"
   assignedPerson: string;
   status: StepStatus;
@@ -111,6 +112,7 @@ export interface PersonalTask {
   priority: PriorityLevel;
   status: 'todo' | 'in_progress' | 'completed';
   assignedTo: string;
+  assignedBy?: string;
   dueDate: string;
   estimatedMinutes?: number;
   spentMinutes?: number;

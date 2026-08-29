@@ -42,7 +42,7 @@ export const StepDetailModal: React.FC<StepDetailModalProps> = ({
   onOpenHandover,
   onEditStep,
 }) => {
-  const { updateStepStatus, updateStepDetails, addStepLog, members } = useWork();
+  const { updateStepStatus, updateStepDetails, addStepLog, members, projects } = useWork();
   const [newLogText, setNewLogText] = useState('');
   const [logMinutes, setLogMinutes] = useState(30);
   const [isSubmitApprovalOpen, setIsSubmitApprovalOpen] = useState(false);
@@ -111,7 +111,7 @@ export const StepDetailModal: React.FC<StepDetailModalProps> = ({
         <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
           
           {/* Quick Info Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs">
             <div>
               <span className="text-slate-500 block mb-1">ผู้รับผิดชอบ</span>
               <div className="font-bold text-slate-800 flex items-center space-x-1.5">
@@ -121,11 +121,38 @@ export const StepDetailModal: React.FC<StepDetailModalProps> = ({
             </div>
 
             <div>
-              <span className="text-slate-500 block mb-1">กำหนดส่ง</span>
-              <div className="font-bold text-slate-800 flex items-center space-x-1.5">
-                <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                <span>{step.dueDate}</span>
-              </div>
+              <span className="text-slate-500 block mb-1">👤 ผู้มอบหมายงาน</span>
+              <select
+                value={step.assignedBy || ''}
+                onChange={(e) => updateStepDetails(project.id, step.id, { assignedBy: e.target.value })}
+                className="bg-white font-bold text-indigo-900 border border-indigo-200 rounded-lg px-2 py-1 focus:ring-2 focus:ring-indigo-500 outline-none w-full"
+              >
+                <option value="">-- ไม่ระบุ --</option>
+                {members.map((m) => (
+                  <option key={'modal-assigner-' + m.id} value={m.name}>
+                    👤 {m.name} ({m.role || m.department})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <span className="text-slate-500 block mb-1">📁 สังกัดโปรเจกต์</span>
+              <select
+                value={project.id}
+                onChange={(e) => {
+                  if (e.target.value !== project.id) {
+                    updateStepDetails(project.id, step.id, { targetProjectId: e.target.value });
+                  }
+                }}
+                className="bg-white font-bold text-slate-800 border border-slate-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 outline-none w-full"
+              >
+                {projects.map((p) => (
+                  <option key={'modal-proj-' + p.id} value={p.id}>
+                    📁 {p.title}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

@@ -42,6 +42,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   const [assignedTo, setAssignedTo] = useState(() => {
     return selectedRole === 'all' ? (members[0]?.name || 'มีมี่') : selectedRole;
   });
+  const [assignedBy, setAssignedBy] = useState('');
   const [dueDate, setDueDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -90,6 +91,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       priority,
       status: 'todo',
       assignedTo,
+      assignedBy: assignedBy || undefined,
       dueDate,
       estimatedMinutes: Number(estimatedMinutes) || 0,
       checklist: checklistItems,
@@ -198,6 +200,25 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                 <option value="โปรดักชั่น">โปรดักชั่น</option>
                 <option value="เทคนิค/อุปกรณ์">เทคนิค/อุปกรณ์</option>
                 <option value="ส่วนตัว">ส่วนตัว</option>
+              </select>
+            </div>
+
+            {/* Assigned By */}
+            <div className="space-y-1">
+              <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                <User className="w-3.5 h-3.5 text-blue-500" /> ผู้มอบหมายงาน (ตัวเลือก)
+              </label>
+              <select
+                value={assignedBy}
+                onChange={(e) => setAssignedBy(e.target.value)}
+                className="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white outline-none"
+              >
+                <option value="">-- ไม่ระบุ --</option>
+                {members.map((m) => (
+                  <option key={'assigner-'+m.id} value={m.name}>
+                    {m.name} ({m.role})
+                  </option>
+                ))}
               </select>
             </div>
           </div>

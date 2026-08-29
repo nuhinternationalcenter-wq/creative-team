@@ -120,6 +120,13 @@ export const SimpleStepListView: React.FC<SimpleStepListViewProps> = ({
                           <span>{step.assignedRole} ({step.assignedPerson})</span>
                         </span>
 
+                        {step.assignedBy && (
+                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 flex items-center space-x-1" title={`ผู้มอบหมาย: ${step.assignedBy}`}>
+                            <User className="w-3 h-3 text-indigo-600" />
+                            <span>ผู้มอบหมาย: {step.assignedBy}</span>
+                          </span>
+                        )}
+
                         {isMyRole && (
                           <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-xs">
                             👉 งานของคุณ
