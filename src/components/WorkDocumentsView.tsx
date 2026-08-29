@@ -552,15 +552,17 @@ export const WorkDocumentsView: React.FC = () => {
     setImageUrl('');
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        const base64 = uploadEvent.target?.result as string;
-        insertImage(base64);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const { uploadFileToStorage } = await import('../lib/storage');
+        const downloadUrl = await uploadFileToStorage(file, 'documents');
+        insertImage(downloadUrl);
+      } catch (err: any) {
+        console.error('Failed to upload image:', err);
+        alert('Upload failed: ' + err.message);
+      }
     }
   };
 

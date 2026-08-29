@@ -156,6 +156,23 @@ const STORAGE_KEY_ROLE = 'workchain_active_role_v2';
 
 const WorkContext = createContext<WorkContextType | undefined>(undefined);
 
+
+function deepEqual(obj1: any, obj2: any): boolean {
+  if (obj1 === obj2) return true;
+  if (typeof obj1 === 'string' && typeof obj2 === 'string') {
+    if (obj1.startsWith('data:image/') && obj1.length > 200000 && obj2 === '[Large Base64 Image Omitted for Firestore]') return true;
+    if (obj2.startsWith('data:image/') && obj2.length > 200000 && obj1 === '[Large Base64 Image Omitted for Firestore]') return true;
+  }
+  if (typeof obj1 !== 'object' || obj1 === null || typeof obj2 !== 'object' || obj2 === null) return false;
+  let keys1 = Object.keys(obj1).filter(k => obj1[k] !== undefined);
+  let keys2 = Object.keys(obj2).filter(k => obj2[k] !== undefined);
+  if (keys1.length !== keys2.length) return false;
+  for (let key of keys1) {
+    if (!keys2.includes(key) || !deepEqual(obj1[key], obj2[key])) return false;
+  }
+  return true;
+}
+
 export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [members, setMembers] = useState<TeamMember[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_MEMBERS);
@@ -236,6 +253,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [toast, setToast] = useState<ToastNotification | null>(null);
+  const lastServerStateRef = React.useRef<any>(null);
 
   const dismissToast = () => {
     setToast(null);
@@ -283,8 +301,9 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   // Firestore real-time sync with onSnapshot
   useEffect(() => {
+    let unsubscribe: any;
     import('../lib/sync').then(({ subscribeToWorkspace }) => {
-      const unsubscribe = subscribeToWorkspace((data, hasPendingWrites) => {
+      unsubscribe = subscribeToWorkspace((data, hasPendingWrites) => {
         setIsFirebaseLoaded(true);
         if (data && !hasPendingWrites) {
           const migrated = migrateAllDataToMrLee({
@@ -294,7 +313,17 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
             notifications: data.notifications,
             documents: data.documents,
           });
-
+          
+          lastServerStateRef.current = {
+            members: migrated.members || [],
+            projects: migrated.projects || [],
+            personalTasks: migrated.personalTasks || [],
+            notifications: migrated.notifications || [],
+            documents: migrated.documents || [],
+            customLogo: data.customLogo !== undefined ? data.customLogo : '',
+            themeColor: data.themeColor !== undefined ? data.themeColor : 'slate'
+          };
+          
           if (migrated.members) setMembers(migrated.members);
           if (migrated.projects) setProjects(migrated.projects);
           if (migrated.personalTasks) setPersonalTasks(migrated.personalTasks);
@@ -302,10 +331,12 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (migrated.documents) setDocuments(migrated.documents);
           if (data.customLogo !== undefined) setCustomLogoState(data.customLogo);
           if (data.themeColor !== undefined) setThemeColorState(data.themeColor);
-                  }
+        }
       });
-      return () => unsubscribe();
     });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   // Force-migration check on mount to ensure existing local data with legacy names is converted
@@ -399,17 +430,23 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sync to Firestore when local state changes
   useEffect(() => {
     if (!isFirebaseLoaded) return;
-
+    
+    const currentState = {
+      members,
+      projects,
+      personalTasks,
+      notifications,
+      documents,
+      customLogo,
+      themeColor
+    };
+    
+    if (deepEqual(currentState, lastServerStateRef.current)) {
+      return;
+    }
+    
     import('../lib/sync').then(({ syncToFirestore }) => {
-      syncToFirestore({
-        members,
-        projects,
-        personalTasks,
-        notifications,
-        documents,
-        customLogo,
-        themeColor
-      });
+      syncToFirestore(currentState);
     });
   }, [members, projects, personalTasks, notifications, documents, customLogo, themeColor, isFirebaseLoaded]);
 

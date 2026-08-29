@@ -110,12 +110,13 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
       setIsUploading(true);
       setUploadProgress(10);
       
-      let downloadUrl = '';
-      if (type === 'image') {
-        downloadUrl = await compressImage(file);
-      } else {
-        downloadUrl = await readFileAsDataUrl(file);
-      }
+      const { uploadFileToStorage } = await import('../lib/storage');
+      
+      const downloadUrl = await uploadFileToStorage(
+        file, 
+        'attachments', 
+        (progress) => setUploadProgress(progress)
+      );
       
       const sizeStr = file.size > 1024 * 1024 
         ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
@@ -133,7 +134,7 @@ export const AttachmentManager: React.FC<AttachmentManagerProps> = ({
       onChange([...attachments, newAttachment]);
       setActiveTab(null);
     } catch (e: any) {
-      console.error('File read error:', e);
+      console.error('File upload error:', e);
       alert('เกิดข้อผิดพลาดในการแนบไฟล์: ' + (e.message || e));
     } finally {
       setIsUploading(false);
