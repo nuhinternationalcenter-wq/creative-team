@@ -45,7 +45,7 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    if (step) {
+    if (step && isOpen) {
       const parentProj = projects.find((p) => p.steps.some((s) => s.id === step.id)) || activeProject;
       setSelectedProjectId(parentProj?.id || activeProject?.id || '');
       setAssignedBy(step.assignedBy || '');
@@ -61,9 +61,11 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
       setCardColor(step.color || '');
       setShowDeleteConfirm(false);
     }
-  }, [step, isOpen, projects, activeProject]);
+  }, [step?.id, isOpen]);
 
-  if (!isOpen || !step || !activeProject) return null;
+  if (!isOpen || !step) return null;
+
+  const currentParentProj = projects.find((p) => p.steps.some((s) => s.id === step.id)) || activeProject;
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,14 +74,15 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
     const matchedMember = members.find((m) => m.name.includes(assignedRole) || assignedRole.includes(m.name));
     const assignedPersonName = matchedMember ? matchedMember.name : assignedRole;
     const primaryLink = attachments.find((a) => a.type === 'link')?.url || step.link || '';
+    const currentProjId = currentParentProj?.id || activeProject?.id || '';
 
-    updateStepDetails(activeProject.id, step.id, {
+    updateStepDetails(currentProjId, step.id, {
       title: title.trim(),
       description: description.trim(),
       assignedRole: assignedRole.trim(),
       assignedPerson: assignedPersonName,
       assignedBy: assignedBy.trim() || undefined,
-      targetProjectId: selectedProjectId || activeProject.id,
+      targetProjectId: selectedProjectId || currentProjId,
       dueDate,
       status,
       taskScope,

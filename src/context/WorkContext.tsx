@@ -181,6 +181,17 @@ function mergeProjects(localProjects: TeamChainProject[], serverProjects: TeamCh
   if (!serverProjects || serverProjects.length === 0) return localProjects || [];
   if (!localProjects || localProjects.length === 0) return serverProjects || [];
 
+  // Track step target project according to localProjects first (local is newest action)
+  const stepTargetProjectMap = new Map<string, string>();
+  for (const lProj of localProjects) {
+    if (!lProj || !lProj.steps) continue;
+    for (const step of lProj.steps) {
+      if (step && step.id) {
+        stepTargetProjectMap.set(step.id, lProj.id);
+      }
+    }
+  }
+
   const projectMap = new Map<string, TeamChainProject>();
 
   for (const sProj of serverProjects) {
@@ -191,7 +202,7 @@ function mergeProjects(localProjects: TeamChainProject[], serverProjects: TeamCh
   for (const lProj of localProjects) {
     if (!lProj || !lProj.id) continue;
     if (!projectMap.has(lProj.id)) {
-      projectMap.set(lProj.id, lProj);
+      projectMap.set(lProj.id, { ...lProj, steps: [...(lProj.steps || [])] });
     } else {
       const existing = projectMap.get(lProj.id)!;
       const stepMap = new Map<string, ChainStep>();
@@ -226,7 +237,20 @@ function mergeProjects(localProjects: TeamChainProject[], serverProjects: TeamCh
     }
   }
 
-  return Array.from(projectMap.values());
+  // Deduplicate: Enforce that each step ID exists in ONLY ONE project across the workspace
+  const finalProjects = Array.from(projectMap.values());
+  for (const proj of finalProjects) {
+    proj.steps = proj.steps.filter((step) => {
+      if (!step || !step.id) return false;
+      const assignedProjId = stepTargetProjectMap.get(step.id);
+      if (assignedProjId && assignedProjId !== proj.id) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  return finalProjects;
 }
 
 function mergePersonalTasks(localTasks: PersonalTask[], serverTasks: PersonalTask[]): PersonalTask[] {
@@ -982,50 +1006,40 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ) => {
     const { targetProjectId, ...stepUpdates } = updates;
     setProjects((prev) => {
-      const sourceProj = prev.find((p) => p.steps.some((s) => s.id === stepId)) || prev.find((p) => p.id === projectId);
-      const currentProjId = sourceProj ? sourceProj.id : projectId;
+      let stepToMove: ChainStep | null = null;
+      let currentProjId: string = projectId;
 
-      if (targetProjectId && targetProjectId !== currentProjId) {
-        let stepToMove: ChainStep | null = null;
-        const newProjects = prev.map((proj) => {
-          if (proj.id === currentProjId) {
-            const found = proj.steps.find((s) => s.id === stepId);
-            if (found) {
-              stepToMove = { ...found, ...stepUpdates };
-            }
-            return {
-              ...proj,
-              steps: proj.steps.filter((s) => s.id !== stepId),
-              updatedAt: new Date().toISOString(),
-            };
-          }
-          return proj;
-        });
-
-        if (stepToMove) {
-          return newProjects.map((proj) => {
-            if (proj.id === targetProjectId) {
-              const maxStepNum = proj.steps.reduce((max, s) => Math.max(max, s.stepNumber), 0);
-              return {
-                ...proj,
-                steps: [...proj.steps, { ...(stepToMove as ChainStep), stepNumber: maxStepNum + 1 }],
-                updatedAt: new Date().toISOString(),
-              };
-            }
-            return proj;
-          });
+      for (const proj of prev) {
+        const found = proj.steps.find((s) => s.id === stepId);
+        if (found) {
+          stepToMove = { ...found, ...stepUpdates };
+          currentProjId = proj.id;
+          break;
         }
-        return newProjects;
       }
 
-      return prev.map((proj) => {
-        const hasStep = proj.steps.some((s) => s.id === stepId);
-        if (proj.id !== currentProjId && !hasStep) return proj;
-        return {
-          ...proj,
-          steps: proj.steps.map((step) => (step.id === stepId ? { ...step, ...stepUpdates } : step)),
-          updatedAt: new Date().toISOString(),
-        };
+      if (!stepToMove) return prev;
+
+      const destinationProjectId = targetProjectId || currentProjId;
+
+      // Clean stepId from ALL projects first
+      const cleanedProjects = prev.map((proj) => ({
+        ...proj,
+        steps: proj.steps.filter((s) => s.id !== stepId),
+        updatedAt: proj.id === currentProjId || proj.id === destinationProjectId ? new Date().toISOString() : proj.updatedAt,
+      }));
+
+      // Add updated step to destination project ONCE
+      return cleanedProjects.map((proj) => {
+        if (proj.id === destinationProjectId) {
+          const maxStepNum = proj.steps.reduce((max, s) => Math.max(max, s.stepNumber), 0);
+          return {
+            ...proj,
+            steps: [...proj.steps, { ...stepToMove!, stepNumber: maxStepNum + 1 }],
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return proj;
       });
     });
   };

@@ -50,21 +50,25 @@ export const StepDetailModal: React.FC<StepDetailModalProps> = ({
 
   if (!isOpen || !step || !project) return null;
 
+  // Retrieve live project and step from WorkContext to ensure real-time UI updates
+  const liveProject = projects.find((p) => p.steps.some((s) => s.id === step.id)) || project;
+  const liveStep = liveProject?.steps.find((s) => s.id === step.id) || step;
+
   const handleAttachmentsChange = (attachments: TaskAttachment[]) => {
-    updateStepDetails(project.id, step.id, { attachments });
+    updateStepDetails(liveProject.id, liveStep.id, { attachments });
   };
 
   // Find prerequisite steps
-  const prerequisiteSteps = project.steps.filter((s) => step.dependencies.includes(s.id));
+  const prerequisiteSteps = liveProject.steps.filter((s) => liveStep.dependencies.includes(s.id));
   // Find dependent steps that rely on this step
-  const unlockedSteps = project.steps.filter((s) => s.dependencies.includes(step.id));
+  const unlockedSteps = liveProject.steps.filter((s) => s.dependencies.includes(liveStep.id));
 
   const handleStatusChange = (newStatus: StepStatus) => {
     if (newStatus === 'completed') {
-      onOpenHandover(step);
+      onOpenHandover(liveStep);
       onClose();
     } else {
-      updateStepStatus(project.id, step.id, newStatus, undefined, `เปลี่ยนสถานะเป็น ${newStatus}`);
+      updateStepStatus(liveProject.id, liveStep.id, newStatus, undefined, `เปลี่ยนสถานะเป็น ${newStatus}`);
     }
   };
 
@@ -72,8 +76,8 @@ export const StepDetailModal: React.FC<StepDetailModalProps> = ({
     e.preventDefault();
     if (!newLogText.trim()) return;
 
-    addStepLog(project.id, step.id, {
-      author: step.assignedPerson,
+    addStepLog(liveProject.id, liveStep.id, {
+      author: liveStep.assignedPerson,
       text: newLogText.trim(),
       durationMinutes: Number(logMinutes) || 0,
       type: 'log',
@@ -116,15 +120,15 @@ export const StepDetailModal: React.FC<StepDetailModalProps> = ({
               <span className="text-slate-500 block mb-1">ผู้รับผิดชอบ</span>
               <div className="font-bold text-slate-800 flex items-center space-x-1.5">
                 <User className="w-3.5 h-3.5 text-blue-600" />
-                <span>{step.assignedRole} ({step.assignedPerson})</span>
+                <span>{liveStep.assignedRole} ({liveStep.assignedPerson})</span>
               </div>
             </div>
 
             <div>
               <span className="text-slate-500 block mb-1">👤 ผู้มอบหมายงาน</span>
               <select
-                value={step.assignedBy || ''}
-                onChange={(e) => updateStepDetails(project.id, step.id, { assignedBy: e.target.value })}
+                value={liveStep.assignedBy || ''}
+                onChange={(e) => updateStepDetails(liveProject.id, liveStep.id, { assignedBy: e.target.value })}
                 className="bg-white font-bold text-indigo-900 border border-indigo-200 rounded-lg px-2 py-1 focus:ring-2 focus:ring-indigo-500 outline-none w-full"
               >
                 <option value="">-- ไม่ระบุ --</option>
@@ -139,10 +143,10 @@ export const StepDetailModal: React.FC<StepDetailModalProps> = ({
             <div>
               <span className="text-slate-500 block mb-1">📁 สังกัดโปรเจกต์</span>
               <select
-                value={project.id}
+                value={liveProject.id}
                 onChange={(e) => {
-                  if (e.target.value !== project.id) {
-                    updateStepDetails(project.id, step.id, { targetProjectId: e.target.value });
+                  if (e.target.value !== liveProject.id) {
+                    updateStepDetails(liveProject.id, liveStep.id, { targetProjectId: e.target.value });
                   }
                 }}
                 className="bg-white font-bold text-slate-800 border border-slate-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 outline-none w-full"
@@ -158,7 +162,7 @@ export const StepDetailModal: React.FC<StepDetailModalProps> = ({
             <div>
               <span className="text-slate-500 block mb-1">สถานะปัจจุบัน</span>
               <select
-                value={step.status}
+                value={liveStep.status}
                 onChange={(e) => handleStatusChange(e.target.value as StepStatus)}
                 className="bg-white font-bold text-slate-900 border border-slate-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 outline-none w-full"
               >

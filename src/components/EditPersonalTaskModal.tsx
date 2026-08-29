@@ -48,7 +48,7 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    if (task) {
+    if (task && isOpen) {
       setSelectedProjectId(task.projectId || '');
       setAssignedBy(task.assignedBy || '');
       setTitle(task.title || '');
@@ -67,7 +67,7 @@ export const EditPersonalTaskModal: React.FC<EditPersonalTaskModalProps> = ({
       setShowDeleteConfirm(false);
       setNewChecklistText('');
     }
-  }, [task, isOpen, members]);
+  }, [task?.id, isOpen]);
 
   if (!isOpen || !task) return null;
 
