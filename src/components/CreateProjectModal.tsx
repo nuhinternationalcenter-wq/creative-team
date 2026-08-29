@@ -7,7 +7,8 @@ import {
   Layers, 
   Sparkles,
   Info,
-  Edit3
+  Edit3,
+  Trash2
 } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 import { PriorityLevel, TeamChainProject } from '../types';

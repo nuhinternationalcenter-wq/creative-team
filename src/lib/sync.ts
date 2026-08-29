@@ -160,6 +160,7 @@ export const subscribeToWorkspace = (callback: (data: any | null, hasPendingWrit
     (error: any) => {
       console.error("Firestore Subscribe Error:", error);
       handleFirestoreError(error, OperationType.GET, path);
+      callback(null, false);
     }
   );
 };

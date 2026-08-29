@@ -308,9 +308,15 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Firestore real-time sync with onSnapshot
   useEffect(() => {
     let unsubscribe: any;
+    // Safety fallback: Ensure app loads after max 1.5s even if Firebase is slow/blocked
+    const fallbackTimer = setTimeout(() => {
+      setIsFirebaseLoaded(true);
+    }, 1500);
+
     import('../lib/sync').then(({ subscribeToWorkspace, hasPendingSync }) => {
       unsubscribe = subscribeToWorkspace((data, hasPendingWrites) => {
         setIsFirebaseLoaded(true);
+        clearTimeout(fallbackTimer);
 
         // Prevent bouncing: Ignore snapshot if we have a pending debounced local write
         if (hasPendingSync && hasPendingSync()) {
@@ -346,8 +352,14 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (data.themeColor !== undefined) setThemeColorState(data.themeColor);
         }
       });
+    }).catch(err => {
+      console.error("Failed to load sync module:", err);
+      setIsFirebaseLoaded(true);
+      clearTimeout(fallbackTimer);
     });
+
     return () => {
+      clearTimeout(fallbackTimer);
       if (unsubscribe) unsubscribe();
     };
   }, []);

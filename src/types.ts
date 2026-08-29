@@ -34,6 +34,7 @@ export interface WorkLogEntry {
   text: string;
   durationMinutes?: number;
   type: 'log' | 'handover' | 'status_change' | 'comment' | 'approval';
+  attachments?: TaskAttachment[];
 }
 
 export interface ApprovalLogEntry {
