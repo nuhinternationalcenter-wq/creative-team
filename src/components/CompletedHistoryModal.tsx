@@ -15,7 +15,8 @@ import {
   FileText,
   Download,
   Printer,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 import { ChainStep, TaskAttachment } from '../types';
@@ -34,7 +35,17 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
   onClose,
   onSelectStep,
 }) => {
-  const { activeProject, personalTasks, selectedRole, reopenStep, updatePersonalTask, updateStepStatus, members } = useWork();
+  const { 
+    activeProject, 
+    personalTasks, 
+    selectedRole, 
+    reopenStep, 
+    updatePersonalTask, 
+    updateStepStatus, 
+    deletePersonalTask, 
+    deleteStep, 
+    members 
+  } = useWork();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
@@ -123,6 +134,17 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
       updatePersonalTask(stepId, { status: 'in_progress' });
     } else {
       reopenStep(activeProject?.id || '', stepId);
+    }
+  };
+
+  const handleDelete = (stepId: string, title: string) => {
+    if (window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบงาน "${title}" ออกจากระบบ?`)) {
+      const isPersonal = personalTasks.some((t) => t.id === stepId);
+      if (isPersonal) {
+        deletePersonalTask(stepId);
+      } else {
+        deleteStep(activeProject?.id || '', stepId);
+      }
     }
   };
 
@@ -471,16 +493,28 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
                       )}
                     </div>
 
-                    {/* Restore Button */}
-                    <button
-                      type="button"
-                      onClick={() => handleRestore(step.id)}
-                      className="print:hidden px-3 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition flex items-center space-x-1.5 shrink-0 cursor-pointer"
-                      title="นำงานนี้กลับเข้าสู่ตารางทำงานเพื่อแก้ไขหรือทำต่อ"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span>ดึงกลับมาทำต่อ</span>
-                    </button>
+                    {/* Action Buttons: Restore & Delete */}
+                    <div className="flex items-center space-x-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleRestore(step.id)}
+                        className="print:hidden px-3 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition flex items-center space-x-1.5 cursor-pointer"
+                        title="นำงานนี้กลับเข้าสู่ตารางทำงานเพื่อแก้ไขหรือทำต่อ"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>ดึงกลับมาทำต่อ</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(step.id, step.title)}
+                        className="print:hidden px-2.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-xs font-bold rounded-xl border border-slate-200 transition flex items-center space-x-1 cursor-pointer"
+                        title="ลบงานนี้ออกจากประวัติผลงาน"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                        <span className="hidden sm:inline">ลบ</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Handover & Completion Metadata */}
