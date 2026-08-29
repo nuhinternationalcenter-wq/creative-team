@@ -74,23 +74,23 @@ export const isSameMember = (
   }
 
   if (memberId === 'mkt' || name.includes('mkt') || name.includes('การตลาด')) {
-    return val === 'mkt' || val === 'การตลาด';
+    return val.includes('mkt') || val.includes('การตลาด');
   }
 
   if (memberId === 'po' || name.includes('po') || name.includes('จัดซื้อ') || name.includes('สั่งผลิต')) {
-    return val === 'po' || val === 'จัดซื้อ' || val === 'สั่งผลิต';
+    return val.includes('po') || val.includes('จัดซื้อ') || val.includes('สั่งผลิต');
   }
 
   if (memberId === 'suri' || name.includes('ซูรี')) {
-    return val === 'ซูรี' || val === 'suri';
+    return val.includes('ซูรี') || val.includes('suri');
   }
 
   if (memberId === 'kafah' || name.includes('กะฟา')) {
-    return val === 'กะฟา' || val === 'kafah';
+    return val.includes('กะฟา') || val.includes('kafah');
   }
 
   if (memberId === 'npd' || name.includes('npd')) {
-    return val === 'npd' || val === 'product';
+    return val.includes('npd') || val.includes('product');
   }
 
   // Fallback check: removed for stricter matching

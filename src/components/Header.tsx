@@ -302,14 +302,13 @@ export const Header: React.FC<HeaderProps> = ({
                   aria-label="เลือกมุมมองผู้ใช้งาน"
                   className="bg-transparent text-slate-900 font-medium focus:outline-none cursor-pointer pr-1 truncate text-xs"
                 >
-                  <option value="all" className="bg-white text-slate-900">✨ ทุกคน</option>
-                  <optgroup label="สมาชิกในทีม" className="bg-white text-slate-900 font-semibold">
-                    {members.map((m) => (
-                      <option key={m.id} value={m.name} className="bg-white text-slate-900">
-                        {m.name} ({m.role})
-                      </option>
-                    ))}
-                  </optgroup>
+                  <option value="all" className="bg-white text-slate-900">✨ ทุกคน (View All)</option>
+                  
+                  {members.map((m) => (
+                    <option key={m.id} value={m.name} className="bg-white text-slate-900">
+                      {m.name} ({m.role})
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

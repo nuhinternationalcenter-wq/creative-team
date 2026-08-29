@@ -331,14 +331,54 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
     }
   };
 
-  const visibleMembers = selectedRole === "all" ? members : members.filter(m => m.name.includes(selectedRole) || selectedRole.includes(m.name) || isSameMember(m.name, selectedRole, m.id));
+  const visibleMembers = selectedRole === "all" 
+    ? members 
+    : members.filter(m => 
+        m.name === selectedRole || 
+        m.id === selectedRole
+      );
   const minColWidth = getColumnMinWidth();
-  const totalMinWidth = visibleMembers.length * minColWidth;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const totalMinWidth = visibleMembers.length * (isMobile && visibleMembers.length === 1 ? window.innerWidth - 32 : minColWidth);
+
+  // Function to toggle role filter
+  const toggleRoleFilter = (name: string) => {
+    if (selectedRole === name) {
+      setSelectedRole('all');
+    } else {
+      setSelectedRole(name);
+      // Wait for re-render then scroll
+      setTimeout(() => scrollToMember(name), 100);
+    }
+  };
 
 
   return (
     <div className="space-y-3 font-prompt">
       
+      {/* Top Filter Indicator (Show only when filtered) */}
+      {selectedRole !== 'all' && (
+        <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 p-2.5 rounded-xl animate-in fade-in duration-300">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+              <Users className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest leading-none">Individual View</div>
+              <div className="text-sm font-bold text-indigo-900 leading-tight">
+                {selectedRole}
+              </div>
+            </div>
+          </div>
+          <button 
+            onClick={() => setSelectedRole('all')}
+            className="px-3 py-1.5 bg-white hover:bg-indigo-600 hover:text-white text-indigo-600 text-xs font-bold rounded-lg border border-indigo-200 transition-all cursor-pointer shadow-2xs flex items-center space-x-1.5"
+          >
+            <span>❌ ล้างตัวกรอง (Clear)</span>
+          </button>
+        </div>
+      )}
+
       {/* Top Minimalist Action & Control Bar */}
       <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
         
@@ -456,13 +496,13 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                 <button
                   key={m.id}
                   type="button"
-                  onClick={() => scrollToMember(m.name)}
+                  onClick={() => toggleRoleFilter(m.name)}
                   className={`shrink-0 flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-sm font-medium border transition cursor-pointer ${
                     count > 0 
                       ? `${colorStyle.subtleBg} ${colorStyle.headerBorder} ${colorStyle.headerText} hover:shadow-2xs` 
                       : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                  }`}
-                  title={`เลื่อนไปดูคอลัมน์ของ ${m.name} (${m.role})`}
+                  } ${selectedRole === m.name ? 'ring-2 ring-slate-900 shadow-sm' : ''}`}
+                  title={`กรองดูคอลัมน์ของ ${m.name} (${m.role})`}
                 >
                   <span 
                     className="w-2.5 h-2.5 rounded-full shrink-0"
@@ -675,26 +715,27 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
         onMouseLeave={handleMouseLeave}
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
-        className={`overflow-x-auto overflow-y-auto min-h-[500px] max-h-[calc(100vh-140px)] pb-6 pt-1 transition-all rounded-2xl ${
+        className={`overflow-x-auto overflow-y-auto min-h-[500px] max-h-[calc(100vh-140px)] pb-6 pt-1 transition-all rounded-2xl touch-pan-x ${
           isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
         }`}
-        style={{ scrollBehavior: isDragging ? 'auto' : 'smooth' }}
+        style={{ 
+          scrollBehavior: isDragging ? 'auto' : 'smooth',
+          WebkitOverflowScrolling: 'touch'
+        }}
       >
         <div 
           className="grid gap-3.5 items-start"
           style={{
             minWidth: `${totalMinWidth}px`,
-            gridTemplateColumns: `repeat(${visibleMembers.length}, minmax(${minColWidth}px, 1fr))`
+            gridTemplateColumns: visibleMembers.length === 1 
+              ? '1fr' 
+              : `repeat(${visibleMembers.length}, minmax(${minColWidth}px, 1fr))`
           }}
         >
           {visibleMembers.map((member) => {
             const steps = getStepsByRole(member.name);
             const colorStyle = getMemberColorStyle(member);
-            const isHighlight = selectedRole !== 'all' && (
-              member.name.includes(selectedRole) || 
-              selectedRole.includes(member.name) ||
-              isSameMember(member.name, selectedRole, member.id)
-            );
+            const isHighlight = selectedRole !== 'all' && (member.name === selectedRole || member.id === selectedRole);
 
             const memberHex = member.color || colorStyle.hex;
 
