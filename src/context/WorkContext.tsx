@@ -473,12 +473,75 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(STORAGE_KEY_ROLE, selectedRole);
   }, [selectedRole]);
 
-  const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0] || null;
+  // Helper to map PersonalTask to ChainStep
+  const mapPersonalTaskToStep = (t: PersonalTask, stepNumber: number): ChainStep => {
+    return {
+      id: t.id,
+      stepNumber,
+      title: t.title,
+      description: t.description || t.notes || '',
+      assignedBy: t.assignedBy,
+      assignedRole: t.assignedTo || 'ทั่วไป',
+      assignedPerson: t.assignedTo || 'ทั่วไป',
+      status: (t.status === 'todo' ? 'pending' : t.status) as StepStatus,
+      startDate: t.createdAt ? t.createdAt.split('T')[0] : undefined,
+      dueDate: t.dueDate || new Date().toISOString().split('T')[0],
+      completedAt: t.completedAt,
+      dependencies: [],
+      taskScope: 'personal',
+      attachments: t.attachments || [],
+      workLogs: t.workLogs || [],
+      color: t.color,
+      link: t.link,
+      checklist: t.checklist || [],
+      approvalStatus: t.approvalStatus,
+      approverRole: t.approverRole,
+      submittedForApprovalBy: t.submittedForApprovalBy,
+      submittedForApprovalAt: t.submittedForApprovalAt,
+      approvalComment: t.approvalComment,
+      approvalAttachments: t.approvalAttachments,
+      approvalHistory: t.approvalHistory,
+    };
+  };
+
+  const combineProjectSteps = (project: TeamChainProject, tasks: PersonalTask[]): TeamChainProject => {
+    if (!project) return project;
+    const matchingPersonalTasks = (tasks || []).filter((t) => t && t.projectId === project.id);
+    if (matchingPersonalTasks.length === 0) return project;
+
+    const existingStepIds = new Set(project.steps.map((s) => s.id));
+    const newPersonalSteps: ChainStep[] = [];
+
+    matchingPersonalTasks.forEach((t, idx) => {
+      if (!existingStepIds.has(t.id)) {
+        newPersonalSteps.push(mapPersonalTaskToStep(t, project.steps.length + idx + 1));
+      }
+    });
+
+    if (newPersonalSteps.length === 0) return project;
+
+    const combinedSteps = [...project.steps, ...newPersonalSteps];
+    const completedCount = combinedSteps.filter((s) => s.status === 'completed').length;
+    const progress = combinedSteps.length > 0 ? Math.round((completedCount / combinedSteps.length) * 100) : project.progress;
+
+    return {
+      ...project,
+      steps: combinedSteps,
+      progress,
+    };
+  };
+
+  const rawActiveProject = projects.find((p) => p.id === activeProjectId) || projects[0] || null;
+  const activeProject = useMemo(() => {
+    return rawActiveProject ? combineProjectSteps(rawActiveProject, personalTasks) : null;
+  }, [rawActiveProject, personalTasks]);
 
   const visibleProjects = useMemo(() => {
-    if (selectedRole === 'all' || isLeeAlias(selectedRole)) return projects;
-    return projects.filter(p => !p.allowedMembers || p.allowedMembers.includes(selectedRole));
-  }, [projects, selectedRole]);
+    const filtered = selectedRole === 'all' || isLeeAlias(selectedRole)
+      ? projects
+      : projects.filter(p => !p.allowedMembers || p.allowedMembers.includes(selectedRole));
+    return filtered.map((p) => combineProjectSteps(p, personalTasks));
+  }, [projects, personalTasks, selectedRole]);
 
   const visiblePersonalTasks = useMemo(() => {
     if (selectedRole === 'all' || isLeeAlias(selectedRole)) return personalTasks;
@@ -599,6 +662,29 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Reopen Step (restore from completed history back to active pipeline)
   const reopenStep = (projectId: string, stepId: string) => {
+    if (personalTasks.some((t) => t.id === stepId)) {
+      setPersonalTasks((prev) =>
+        prev.map((t) => {
+          if (t.id !== stepId) return t;
+          const updatedLogs = [...(t.workLogs || [])];
+          updatedLogs.push({
+            id: `log-${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            author: t.assignedTo,
+            text: 'นำงานกลับมาทำต่อจากประวัติงานที่เสร็จสิ้น',
+            type: 'status_change',
+          });
+          return {
+            ...t,
+            status: 'in_progress',
+            completedAt: undefined,
+            workLogs: updatedLogs,
+          };
+        })
+      );
+      showToastNotification('ทุกคน', 'ดึงงานส่วนตัวกลับมาทำต่อ', 'นำงานกลับมายังกระดานทำงานเรียบร้อยแล้ว');
+      return;
+    }
     setProjects((prevProjects) =>
       prevProjects.map((proj) => {
         const hasStep = proj.steps.some((s) => s.id === stepId);
@@ -659,6 +745,43 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     workLogText?: string,
     newAttachments?: any[]
   ) => {
+    if (personalTasks.some((t) => t.id === stepId)) {
+      setPersonalTasks((prev) =>
+        prev.map((t) => {
+          if (t.id !== stepId) return t;
+          const updatedLogs = [...(t.workLogs || [])];
+          if (workLogText) {
+            updatedLogs.push({
+              id: `log-${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              author: t.assignedTo,
+              text: workLogText,
+              type: 'status_change',
+            });
+          }
+          if (handoverComment) {
+            updatedLogs.push({
+              id: `log-${Date.now() + 1}`,
+              timestamp: new Date().toISOString(),
+              author: t.assignedTo,
+              text: `ส่งต่องาน: ${handoverComment}`,
+              type: 'handover',
+            });
+          }
+          const mappedStatus = newStatus === 'pending' ? 'todo' : (newStatus as any);
+          return {
+            ...t,
+            status: mappedStatus,
+            handoverComment: handoverComment || t.notes,
+            notes: handoverComment || t.notes,
+            attachments: newAttachments ? [...(t.attachments || []), ...newAttachments] : t.attachments,
+            completedAt: newStatus === 'completed' ? (t.completedAt || new Date().toISOString()) : undefined,
+            workLogs: updatedLogs,
+          };
+        })
+      );
+    }
+
     setProjects((prevProjects) =>
       prevProjects.map((proj) => {
         const hasStep = proj.steps.some((s) => s.id === stepId);
@@ -720,6 +843,35 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } catch {
       // safe fallback
+    }
+
+    if (personalTasks.some((t) => t.id === stepId)) {
+      setPersonalTasks((prev) =>
+        prev.map((t) => {
+          if (t.id !== stepId) return t;
+          const targetLogs = [...(t.workLogs || [])];
+          targetLogs.push({
+            id: `log-${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            author: t.assignedTo,
+            text: handoverComment || 'ส่งมอบงานสำเร็จ',
+            durationMinutes: logDurationMinutes,
+            type: 'handover',
+          });
+          return {
+            ...t,
+            status: customNextAssignee ? 'in_progress' : 'completed',
+            assignedTo: customNextAssignee || t.assignedTo,
+            completedAt: !customNextAssignee ? (t.completedAt || new Date().toISOString()) : undefined,
+            title: newStepTitle || t.title,
+            dueDate: newStepDueDate || t.dueDate,
+            notes: handoverComment || t.notes,
+            workLogs: targetLogs,
+          };
+        })
+      );
+      showToastNotification(customNextAssignee || 'สมาชิกทีม', 'ส่งต่องานเรียบร้อยแล้ว', handoverComment);
+      return;
     }
 
     setProjects((prevProjects) =>
@@ -880,6 +1032,10 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     stepId: string,
     log: Omit<WorkLogEntry, 'id' | 'timestamp'>
   ) => {
+    if (personalTasks.some((t) => t.id === stepId)) {
+      addPersonalTaskLog(stepId, log);
+      return;
+    }
     setProjects((prev) =>
       prev.map((proj) => {
         if (proj.id !== projectId) return proj;
@@ -909,6 +1065,27 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     stepId: string,
     updates: Partial<ChainStep> & { targetProjectId?: string }
   ) => {
+    if (personalTasks.some((t) => t.id === stepId)) {
+      setPersonalTasks((prev) =>
+        prev.map((t) => {
+          if (t.id !== stepId) return t;
+          const updated = { ...t };
+          if (updates.title !== undefined) updated.title = updates.title;
+          if (updates.description !== undefined) updated.description = updates.description;
+          if (updates.assignedPerson !== undefined || updates.assignedRole !== undefined) {
+            updated.assignedTo = updates.assignedPerson || updates.assignedRole || t.assignedTo;
+          }
+          if (updates.targetProjectId !== undefined) updated.projectId = updates.targetProjectId || undefined;
+          if (updates.dueDate !== undefined) updated.dueDate = updates.dueDate;
+          if (updates.color !== undefined) updated.color = updates.color;
+          if (updates.link !== undefined) updated.link = updates.link;
+          if (updates.attachments !== undefined) updated.attachments = updates.attachments;
+          if (updates.status !== undefined) updated.status = (updates.status === 'pending' ? 'todo' : updates.status) as any;
+          return updated;
+        })
+      );
+      return;
+    }
     const { targetProjectId, ...stepUpdates } = updates;
     setProjects((prev) => {
       let stepToMove: ChainStep | null = null;
@@ -969,6 +1146,10 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteStep = (projectId: string, stepId: string) => {
+    if (personalTasks.some((t) => t.id === stepId)) {
+      deletePersonalTask(stepId);
+      return;
+    }
     let newProjects: TeamChainProject[] = [];
     setProjects((prev) => {
       newProjects = prev.map((proj) => {
@@ -1014,6 +1195,10 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     comment?: string,
     attachments?: any[]
   ) => {
+    if (personalTasks.some((t) => t.id === stepId)) {
+      submitPersonalTaskForApproval(stepId, approverRole, submitterRole, comment, attachments);
+      return;
+    }
     const nowIso = new Date().toISOString();
     let stepTitle = '';
 
@@ -1088,6 +1273,10 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const approveStep = (projectId: string, stepId: string, approverName: string, comment?: string) => {
+    if (personalTasks.some((t) => t.id === stepId)) {
+      approvePersonalTask(stepId, approverName, comment);
+      return;
+    }
     try {
       confetti({
         particleCount: 60,
@@ -1171,6 +1360,10 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const rejectStep = (projectId: string, stepId: string, approverName: string, comment: string) => {
+    if (personalTasks.some((t) => t.id === stepId)) {
+      rejectPersonalTask(stepId, approverName, comment);
+      return;
+    }
     const nowIso = new Date().toISOString();
     let stepTitle = '';
     let targetSubmitter = '';
@@ -1247,6 +1440,10 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     revisionComment: string,
     attachments?: any[]
   ) => {
+    if (personalTasks.some((t) => t.id === stepId)) {
+      requestPersonalTaskRevision(stepId, approverName, revisionComment, attachments);
+      return;
+    }
     const nowIso = new Date().toISOString();
     let stepTitle = '';
     let targetSubmitter = '';

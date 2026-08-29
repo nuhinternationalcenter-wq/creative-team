@@ -70,6 +70,7 @@ export interface ChainStep {
   estimatedHours?: number;
   color?: string;
   link?: string;
+  checklist?: ChecklistItem[];
   // Approval System fields
   approvalStatus?: ApprovalStatus;
   submittedForApprovalBy?: string;

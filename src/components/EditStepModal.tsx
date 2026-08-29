@@ -28,7 +28,7 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
   onClose,
   step,
 }) => {
-  const { activeProject, projects, members, updateStepDetails, deleteStep } = useWork();
+  const { activeProject, projects, members, updateStepDetails, deleteStep, personalTasks } = useWork();
 
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [assignedBy, setAssignedBy] = useState('');
@@ -46,7 +46,8 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
 
   useEffect(() => {
     if (step && isOpen) {
-      const parentProj = projects.find((p) => p.steps.some((s) => s.id === step.id)) || activeProject;
+      const personalTask = personalTasks?.find((t) => t.id === step.id);
+      const parentProj = projects.find((p) => p.steps.some((s) => s.id === step.id)) || (personalTask?.projectId ? projects.find((p) => p.id === personalTask.projectId) : null) || activeProject;
       setSelectedProjectId(parentProj?.id || activeProject?.id || '');
       setAssignedBy(step.assignedBy || '');
       setTitle(step.title || '');
@@ -65,7 +66,8 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
 
   if (!isOpen || !step) return null;
 
-  const currentParentProj = projects.find((p) => p.steps.some((s) => s.id === step.id)) || activeProject;
+  const personalTask = personalTasks?.find((t) => t.id === step.id);
+  const currentParentProj = projects.find((p) => p.steps.some((s) => s.id === step.id)) || (personalTask?.projectId ? projects.find((p) => p.id === personalTask.projectId) : null) || activeProject;
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
