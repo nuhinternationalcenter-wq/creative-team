@@ -16,7 +16,8 @@ import {
   Download,
   Printer,
   Plus,
-  Trash2
+  Trash2,
+  Folder
 } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 import { ChainStep, TaskAttachment } from '../types';
@@ -36,6 +37,7 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
   onSelectStep,
 }) => {
   const { 
+    projects,
     activeProject, 
     personalTasks, 
     selectedRole, 
@@ -50,31 +52,51 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [selectedProjectFilter, setSelectedProjectFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'list' | 'hr_report'>('list');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [editingAttachmentsStepId, setEditingAttachmentsStepId] = useState<string | null>(null);
 
-  if (!isOpen || !activeProject) return null;
+  if (!isOpen) return null;
 
-  const teamCompletedSteps = activeProject.steps.filter((s) => s.status === 'completed');
+  // Gather ALL completed steps from ALL projects
+  const teamCompletedSteps: (ChainStep & { projectName?: string; projectCode?: string; targetProjectId?: string })[] = [];
+  projects.forEach((proj) => {
+    proj.steps.forEach((s) => {
+      if (s.status === 'completed') {
+        teamCompletedSteps.push({
+          ...s,
+          projectName: proj.title,
+          projectCode: proj.code,
+          targetProjectId: proj.id,
+        });
+      }
+    });
+  });
 
-  const personalCompletedSteps: ChainStep[] = personalTasks
+  const personalCompletedSteps: (ChainStep & { projectName?: string; projectCode?: string; targetProjectId?: string })[] = personalTasks
     .filter((t) => t.status === 'completed')
-    .map((t) => ({
-      id: t.id,
-      stepNumber: 0,
-      title: t.title,
-      description: t.description || t.notes,
-      assignedRole: t.assignedTo || 'งานส่วนตัว',
-      assignedPerson: t.assignedTo || 'ส่วนตัว',
-      status: 'completed',
-      taskScope: 'personal',
-      dueDate: t.dueDate,
-      completedAt: t.updatedAt || t.dueDate,
-      handoverComment: t.notes ? `[งานส่วนตัว] ${t.notes}` : 'งานส่วนตัวเสร็จสมบูรณ์',
-      attachments: t.attachments || [],
-      dependencies: [],
-    }));
+    .map((t) => {
+      const parentProj = t.projectId ? projects.find((p) => p.id === t.projectId) : undefined;
+      return {
+        id: t.id,
+        stepNumber: 0,
+        title: t.title,
+        description: t.description || t.notes,
+        assignedRole: t.assignedTo || 'งานส่วนตัว',
+        assignedPerson: t.assignedTo || 'ส่วนตัว',
+        status: 'completed' as const,
+        taskScope: 'personal' as const,
+        dueDate: t.dueDate,
+        completedAt: t.updatedAt || t.dueDate,
+        handoverComment: t.notes ? `[งานส่วนตัว] ${t.notes}` : 'งานส่วนตัวเสร็จสมบูรณ์',
+        attachments: t.attachments || [],
+        dependencies: [],
+        projectName: parentProj ? parentProj.title : 'งานส่วนตัว/งานทั่วไป',
+        projectCode: parentProj ? parentProj.code : 'PERSONAL',
+        targetProjectId: t.projectId || 'personal',
+      };
+    });
 
   const allCompleted = [...teamCompletedSteps, ...personalCompletedSteps];
 
@@ -87,6 +109,15 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
   ];
 
   const filteredSteps = allCompleted.filter((s) => {
+    // Project filter
+    if (selectedProjectFilter !== 'all') {
+      if (selectedProjectFilter === 'personal') {
+        if (s.taskScope !== 'personal' && s.targetProjectId !== 'personal') return false;
+      } else {
+        if (s.targetProjectId !== selectedProjectFilter) return false;
+      }
+    }
+
     // Month filter
     if (selectedMonth !== 'all') {
       const stepDate = s.completedAt || '';
@@ -100,7 +131,8 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
       const matchesDesc = s.description && s.description.toLowerCase().includes(q);
       const matchesComment = s.handoverComment && s.handoverComment.toLowerCase().includes(q);
       const matchesPerson = s.assignedRole.toLowerCase().includes(q) || s.assignedPerson.toLowerCase().includes(q);
-      if (!matchesTitle && !matchesDesc && !matchesComment && !matchesPerson) return false;
+      const matchesProject = s.projectName && s.projectName.toLowerCase().includes(q);
+      if (!matchesTitle && !matchesDesc && !matchesComment && !matchesPerson && !matchesProject) return false;
     }
 
     // Member / Assignee filter
@@ -133,7 +165,10 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
     if (isPersonal) {
       updatePersonalTask(stepId, { status: 'in_progress' });
     } else {
-      reopenStep(activeProject?.id || '', stepId);
+      const parentProj = projects.find((p) => p.steps.some((s) => s.id === stepId));
+      if (parentProj) {
+        reopenStep(parentProj.id, stepId);
+      }
     }
   };
 
@@ -143,7 +178,10 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
       if (isPersonal) {
         deletePersonalTask(stepId);
       } else {
-        deleteStep(activeProject?.id || '', stepId);
+        const parentProj = projects.find((p) => p.steps.some((s) => s.id === stepId));
+        if (parentProj) {
+          deleteStep(parentProj.id, stepId);
+        }
       }
     }
   };
@@ -258,6 +296,26 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
                   {members.map((m) => (
                     <option key={m.id} value={m.name}>{m.name} ({m.role})</option>
                   ))}
+                </select>
+              </div>
+
+              {/* Project Filter Select */}
+              <div className="flex items-center space-x-1">
+                <Folder className="w-4 h-4 text-slate-500 shrink-0" />
+                <select
+                  value={selectedProjectFilter}
+                  onChange={(e) => setSelectedProjectFilter(e.target.value)}
+                  className="px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none"
+                >
+                  <option value="all">📁 ทุกประวัติงานทั้งหมด (All Projects)</option>
+                  <option value="personal">👤 งานส่วนตัว / งานทั่วไป (Personal)</option>
+                  <optgroup label="โปรเจกต์กระบวนการทำงาน">
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        📁 {p.title} ({p.code})
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
 
@@ -467,6 +525,13 @@ export const CompletedHistoryModal: React.FC<CompletedHistoryModalProps> = ({
                         >
                           {step.title}
                         </h4>
+
+                        {step.projectName && (
+                          <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold flex items-center space-x-1">
+                            <Folder className="w-3 h-3 text-slate-500" />
+                            <span>{step.projectName}</span>
+                          </span>
+                        )}
 
                         {isPersonal ? (
                           <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center space-x-1">

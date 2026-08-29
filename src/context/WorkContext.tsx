@@ -260,6 +260,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [toast, setToast] = useState<ToastNotification | null>(null);
   const lastServerStateRef = React.useRef<any>(null);
   const isSnapshotUpdatingRef = React.useRef<boolean>(false);
+  const lastLocalMutationTimeRef = React.useRef<number>(0);
 
   const dismissToast = () => {
     setToast(null);
@@ -317,6 +318,12 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       unsubscribe = subscribeToWorkspace((data, hasPendingWrites) => {
         setIsFirebaseLoaded(true);
         clearTimeout(fallbackTimer);
+
+        // Shield recent local edits: Ignore incoming snapshot if user made a local mutation within 2.5s
+        const timeSinceMutation = Date.now() - lastLocalMutationTimeRef.current;
+        if (timeSinceMutation < 2500) {
+          return;
+        }
 
         // Prevent bouncing: Ignore snapshot if we have a pending debounced local write
         if (hasPendingSync && hasPendingSync()) {
@@ -1224,6 +1231,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       deletePersonalTask(stepId);
       return;
     }
+    lastLocalMutationTimeRef.current = Date.now();
     let newProjects: TeamChainProject[] = [];
     setProjects((prev) => {
       newProjects = prev.map((proj) => {
@@ -1238,11 +1246,10 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updatedAt: new Date().toISOString(),
         };
       });
+      try {
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(newProjects));
+      } catch {}
       return newProjects;
-    });
-
-    import('../lib/sync').then(({ updateFirestoreDoc }) => {
-      updateFirestoreDoc({ projects: newProjects });
     });
   };
 
@@ -1609,22 +1616,24 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteProject = (id: string) => {
+    lastLocalMutationTimeRef.current = Date.now();
     let newProjects: TeamChainProject[] = [];
     setProjects((prev) => {
       newProjects = prev.filter((p) => p.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(newProjects));
+      } catch {}
       return newProjects;
     });
     if (activeProjectId === id) {
       const remaining = newProjects;
       if (remaining.length > 0) setActiveProjectId(remaining[0].id);
     }
-    import('../lib/sync').then(({ updateFirestoreDoc }) => {
-      updateFirestoreDoc({ projects: newProjects });
-    });
   };
 
   // Personal Tasks CRUD
   const addPersonalTask = (taskData: Omit<PersonalTask, 'id' | 'createdAt'>) => {
+    lastLocalMutationTimeRef.current = Date.now();
     const newTask: PersonalTask = {
       ...taskData,
       id: `pt-${Date.now()}`,
@@ -1632,30 +1641,42 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
       checklist: taskData.checklist || [],
       tags: taskData.tags || [],
     };
-    setPersonalTasks((prev) => [newTask, ...prev]);
+    setPersonalTasks((prev) => {
+      const updated = [newTask, ...prev];
+      try {
+        localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   };
 
   const updatePersonalTask = (id: string, updates: Partial<PersonalTask>) => {
-    setPersonalTasks((prev) =>
-      prev.map((t) => {
+    lastLocalMutationTimeRef.current = Date.now();
+    setPersonalTasks((prev) => {
+      const updated = prev.map((t) => {
         if (t.id !== id) return t;
-        const updated = { ...t, ...updates };
+        const u = { ...t, ...updates };
         if (updates.status === 'completed' && t.status !== 'completed') {
-          updated.completedAt = new Date().toISOString();
+          u.completedAt = new Date().toISOString();
         }
-        return updated;
-      })
-    );
+        return u;
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   };
 
   const deletePersonalTask = (id: string) => {
+    lastLocalMutationTimeRef.current = Date.now();
     let newPersonalTasks: PersonalTask[] = [];
     setPersonalTasks((prev) => {
       newPersonalTasks = prev.filter((t) => t.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(newPersonalTasks));
+      } catch {}
       return newPersonalTasks;
-    });
-    import('../lib/sync').then(({ updateFirestoreDoc }) => {
-      updateFirestoreDoc({ personalTasks: newPersonalTasks });
     });
   };
 

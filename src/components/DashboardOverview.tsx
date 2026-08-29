@@ -13,7 +13,10 @@ import {
   Send,
   Zap,
   Layers,
-  Flame
+  Flame,
+  Plus,
+  Trash2,
+  User
 } from 'lucide-react';
 import { useWork } from '../context/WorkContext';
 import { ChainStep, PersonalTask } from '../types';
@@ -214,8 +217,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
 
       </div>
-
-
 
     </div>
   );
