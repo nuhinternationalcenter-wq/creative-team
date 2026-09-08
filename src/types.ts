@@ -72,6 +72,9 @@ export interface ChainStep {
   color?: string;
   link?: string;
   checklist?: ChecklistItem[];
+  projectId?: string;
+  projectTitle?: string;
+  projectCode?: string;
   // Approval System fields
   approvalStatus?: ApprovalStatus;
   submittedForApprovalBy?: string;

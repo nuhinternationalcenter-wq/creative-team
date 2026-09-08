@@ -113,7 +113,32 @@ export const TeamChainBoard: React.FC<TeamChainBoardProps> = ({ onOpenCreateProj
                       onClick={() => setIsProjectDropdownOpen(false)} 
                     />
                     <div className="absolute top-full left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
-                      <div className="max-h-60 overflow-y-auto py-1">
+                      <div className="max-h-64 overflow-y-auto py-1">
+                        {/* All Projects Filter Option */}
+                        <button
+                          onClick={() => {
+                            setActiveProjectId('all');
+                            setIsProjectDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 text-sm transition font-bold flex items-center justify-between ${
+                            activeProject.id === 'all' 
+                              ? 'bg-slate-900 text-white' 
+                              : 'text-slate-800 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <Layers className={`w-4 h-4 ${activeProject.id === 'all' ? 'text-blue-400' : 'text-slate-500'}`} />
+                            <span>ทุกโปรเจกต์ (All Projects)</span>
+                          </div>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-extrabold ${
+                            activeProject.id === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
+                          }`}>
+                            {projects.length}
+                          </span>
+                        </button>
+
+                        <div className="my-1 border-t border-slate-100" />
+
                         {projects.map((p) => (
                           <button
                             key={p.id}
@@ -174,10 +199,31 @@ export const TeamChainBoard: React.FC<TeamChainBoardProps> = ({ onOpenCreateProj
 
         {/* Right Side: Project Count & View Mode Switcher */}
         <div className="flex items-center gap-4 self-start lg:self-auto">
-          {/* Project Count Circle */}
-          <div className="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold shadow-md shrink-0">
-            {projects.length}
-          </div>
+          {/* Project Count Circle / Interactive Filter Button */}
+          <button
+            onClick={() => setActiveProjectId(activeProject?.id === 'all' ? (projects[0]?.id || '') : 'all')}
+            className={`px-3.5 py-2 rounded-2xl flex items-center space-x-2.5 border transition cursor-pointer ${
+              activeProject?.id === 'all'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-blue-500'
+                : 'bg-white text-slate-800 border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
+            }`}
+            title="คลิกเพื่อเลือกดูทุกโปรเจกต์รวมกัน หรือสลับกลับมาดูโปรเจกต์เดี่ยว"
+          >
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-base font-extrabold shrink-0 shadow-xs ${
+              activeProject?.id === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-white'
+            }`}>
+              {projects.length}
+            </div>
+            <div className="text-left pr-1">
+              <div className="text-[10px] uppercase font-extrabold tracking-wider opacity-75 leading-tight">
+                {activeProject?.id === 'all' ? 'กำลังแสดง' : 'โปรเจกต์ทั้งหมด'}
+              </div>
+              <div className="text-xs font-bold leading-tight flex items-center space-x-1">
+                <span>{activeProject?.id === 'all' ? 'ทุกโปรเจกต์' : 'ฟิลเตอร์ทั้งหมด'}</span>
+                <ChevronDown className="w-3 h-3 opacity-60" />
+              </div>
+            </div>
+          </button>
 
           {/* View Mode Switcher (Matrix Board Only) */}
           <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">

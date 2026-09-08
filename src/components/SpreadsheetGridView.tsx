@@ -917,6 +917,17 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
                         {/* Top Row: Badges & Quick Action */}
                         <div className="flex items-center justify-between mb-1.5 gap-1 flex-wrap">
                           <div className="flex items-center gap-1 flex-wrap">
+                            {/* Project Name Label Badge */}
+                            {(step.projectTitle || (project && project.id !== 'all' ? project.title : '')) && (
+                              <span 
+                                className="px-2 py-0.5 rounded bg-slate-900 text-white text-[10px] font-bold flex items-center space-x-1 shrink-0 shadow-2xs"
+                                title={`โปรเจกต์: ${step.projectTitle || project.title}`}
+                              >
+                                <Layers className="w-3 h-3 text-blue-400" />
+                                <span className="max-w-[130px] truncate">{step.projectTitle || project.title}</span>
+                              </span>
+                            )}
+
                             <span
                               className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
                               style={{

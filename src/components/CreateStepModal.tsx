@@ -32,7 +32,8 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
   defaultPerson,
 }) => {
   const { activeProject, projects, members, addCustomStep, addPersonalTask } = useWork();
-  const [selectedProjectId, setSelectedProjectId] = useState(activeProject?.id || '');
+  const initialProjId = activeProject?.id === 'all' ? (projects[0]?.id || '') : (activeProject?.id || '');
+  const [selectedProjectId, setSelectedProjectId] = useState(initialProjId);
 
   const [taskScope, setTaskScope] = useState<'team' | 'personal'>('team');
   const [title, setTitle] = useState('');
@@ -54,9 +55,13 @@ export const CreateStepModal: React.FC<CreateStepModalProps> = ({
   // Sync selectedProjectId when activeProject changes or initially
   React.useEffect(() => {
     if (activeProject) {
-      setSelectedProjectId(activeProject.id);
+      if (activeProject.id === 'all') {
+        setSelectedProjectId((prev) => (prev && prev !== 'all' ? prev : (projects[0]?.id || '')));
+      } else {
+        setSelectedProjectId(activeProject.id);
+      }
     }
-  }, [activeProject]);
+  }, [activeProject, projects]);
 
   // Sync defaultRole if changed
   React.useEffect(() => {

@@ -479,7 +479,6 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }).catch(err => {
       console.error("Failed to load sync module:", err);
       setIsFirebaseLoaded(true);
-      clearTimeout(fallbackTimer);
     });
 
     return () => {
@@ -691,10 +690,57 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   };
 
-  const rawActiveProject = projects.find((p) => p.id === activeProjectId) || projects[0] || null;
+  const rawActiveProject = activeProjectId === 'all'
+    ? null
+    : (projects.find((p) => p.id === activeProjectId) || projects[0] || null);
+
   const activeProject = useMemo(() => {
-    return rawActiveProject ? combineProjectSteps(rawActiveProject, personalTasks) : null;
-  }, [rawActiveProject, personalTasks]);
+    if (activeProjectId === 'all') {
+      const allCombinedProjects = projects.map((p) => combineProjectSteps(p, personalTasks));
+      const allSteps: ChainStep[] = [];
+      allCombinedProjects.forEach((p) => {
+        p.steps.forEach((s) => {
+          allSteps.push({
+            ...s,
+            projectId: s.projectId || p.id,
+            projectTitle: s.projectTitle || p.title,
+            projectCode: s.projectCode || p.code,
+          });
+        });
+      });
+
+      const completedCount = allSteps.filter((s) => s.status === 'completed').length;
+      const progress = allSteps.length > 0 ? Math.round((completedCount / allSteps.length) * 100) : 0;
+
+      return {
+        id: 'all',
+        title: 'ทุกโปรเจกต์ (All Projects)',
+        code: 'ALL',
+        category: 'รวมทุกโปรเจกต์',
+        description: 'แสดงงานและขั้นตอนการทำงานจากทุกโปรเจกต์รวมกัน',
+        startDate: '',
+        targetDate: '',
+        status: 'active' as const,
+        priority: 'high' as const,
+        steps: allSteps,
+        progress,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    if (!rawActiveProject) return null;
+    const combined = combineProjectSteps(rawActiveProject, personalTasks);
+    return {
+      ...combined,
+      steps: combined.steps.map((s) => ({
+        ...s,
+        projectId: s.projectId || combined.id,
+        projectTitle: s.projectTitle || combined.title,
+        projectCode: s.projectCode || combined.code,
+      })),
+    };
+  }, [activeProjectId, rawActiveProject, projects, personalTasks]);
 
   const visibleProjects = useMemo(() => {
     const filtered = selectedRole === 'all' || isLeeAlias(selectedRole)
