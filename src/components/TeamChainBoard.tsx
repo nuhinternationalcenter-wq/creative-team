@@ -71,8 +71,6 @@ export const TeamChainBoard: React.FC<TeamChainBoardProps> = ({ onOpenCreateProj
     const matchesRole = selectedRole === 'all' || 
       s.assignedRole === selectedRole ||
       s.assignedPerson === selectedRole ||
-      s.assignedRole.includes(selectedRole) || 
-      s.assignedPerson.includes(selectedRole) ||
       (isLeeAlias(selectedRole) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson))) ||
       isSameMember(s.assignedRole, selectedRole, memberId) ||
       isSameMember(s.assignedPerson, selectedRole, memberId);

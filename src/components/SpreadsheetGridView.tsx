@@ -225,16 +225,20 @@ export const SpreadsheetGridView: React.FC<SpreadsheetGridViewProps> = ({
           isSameMember(s.assignedRole, memberName)
         );
 
-        const isWaitingApprovalForMember = (
-          s.status === 'waiting_approval' && (
-            s.approverRole === memberName ||
-            s.approverRole?.includes(memberName) ||
-            memberName.includes(s.approverRole || '') ||
-            (isLeeAlias(memberName) && isLeeAlias(s.approverRole)) ||
-            (memberId && isSameMember(s.approverRole, memberName, memberId)) ||
-            isSameMember(s.approverRole, memberName)
-          )
+        const isApprover = Boolean(s.approverRole) && (
+          s.approverRole === memberName ||
+          isSameMember(s.approverRole, memberName, memberId) ||
+          (isLeeAlias(memberName) && isLeeAlias(s.approverRole))
         );
+
+        const isGeneralApprover = (
+          !s.approverRole ||
+          s.approverRole === 'หัวหน้า/ผู้เกี่ยวข้อง' ||
+          s.approverRole === 'หัวหน้า' ||
+          s.approverRole === 'ผู้อนุมัติ'
+        ) && Boolean(memberObj?.canApprove || memberObj?.roleLevel === 'approver' || memberObj?.roleLevel === 'admin');
+
+        const isWaitingApprovalForMember = s.status === 'waiting_approval' && (isApprover || isGeneralApprover);
 
         return isAssigned || isWaitingApprovalForMember;
       })

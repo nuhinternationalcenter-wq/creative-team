@@ -1124,6 +1124,34 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // 2. Unlock dependent steps
         const newlyUnlockedSteps: ChainStep[] = [];
 
+        // Determine if any newly unlocked step naturally matches customNextAssignee
+        const candidateUnlockSteps = proj.steps.filter((s) => {
+          if (s.id === stepId) return false;
+          if (s.status === 'pending' && s.dependencies.length > 0) {
+            return s.dependencies.every((depId) => completedStepIds.has(depId));
+          }
+          return false;
+        });
+
+        // Check if candidate list contains a step explicitly assigned to customNextAssignee
+        const hasNaturalRecipientStep = customNextAssignee
+          ? candidateUnlockSteps.some(
+              (s) =>
+                s.assignedRole === customNextAssignee ||
+                s.assignedPerson === customNextAssignee ||
+                isSameMember(s.assignedRole, customNextAssignee) ||
+                isSameMember(s.assignedPerson, customNextAssignee) ||
+                (isLeeAlias(customNextAssignee) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson)))
+            )
+          : false;
+
+        // If no natural match exists, find the primary step that directly depends on targetStep (stepId)
+        // Only reassign THIS specific step to customNextAssignee rather than reassigning EVERY candidate step!
+        const directDependentCandidateId =
+          customNextAssignee && !hasNaturalRecipientStep
+            ? candidateUnlockSteps.find((s) => s.dependencies.includes(stepId))?.id
+            : null;
+
         const updatedSteps = proj.steps.map((s) => {
           if (s.id === stepId) {
             const combinedAtts = newAttachments ? [...(s.attachments || []), ...newAttachments] : s.attachments;
@@ -1151,10 +1179,12 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 handoverComment: handoverComment || s.handoverComment,
                 attachments: combinedAtts,
               };
-              if (customNextAssignee) {
+
+              if (customNextAssignee && s.id === directDependentCandidateId) {
                 updatedStep.assignedRole = customNextAssignee;
                 updatedStep.assignedPerson = customNextAssignee;
               }
+
               newlyUnlockedSteps.push(updatedStep);
               return updatedStep;
             }
@@ -1172,9 +1202,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
               s.assignedPerson === customNextAssignee ||
               isSameMember(s.assignedRole, customNextAssignee) ||
               isSameMember(s.assignedPerson, customNextAssignee) ||
-              (isLeeAlias(customNextAssignee) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson))) ||
-              s.assignedRole.includes(customNextAssignee) ||
-              customNextAssignee.includes(s.assignedRole)
+              (isLeeAlias(customNextAssignee) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson)))
           );
 
           if (!hasUnlockedForRecipient) {
@@ -1245,6 +1273,7 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
           message: `${targetStep.assignedPerson} ได้ส่งมอบงาน "${targetStep.title}" เรียบร้อย: "${handoverComment}"`,
           relatedProjectId: projectId,
           relatedStepId: stepId,
+          targetRole: customNextAssignee || targetStep.assignedRole,
         });
 
         const completedCount = updatedSteps.filter((s) => s.status === 'completed').length;

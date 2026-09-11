@@ -32,7 +32,7 @@ export const SimpleStepListView: React.FC<SimpleStepListViewProps> = ({
   onOpenStepDetail,
   onOpenHandover,
 }) => {
-  const { selectedRole, updateStepStatus, activeProject } = useWork();
+  const { selectedRole, updateStepStatus, activeProject, members } = useWork();
   const [submitApprovalStep, setSubmitApprovalStep] = useState<ChainStep | null>(null);
   const [approvalActionStep, setApprovalActionStep] = useState<ChainStep | null>(null);
 
@@ -60,21 +60,27 @@ export const SimpleStepListView: React.FC<SimpleStepListViewProps> = ({
           const isPending = step.status === 'pending';
           const isBlocked = step.status === 'blocked';
 
+          const memberObj = members.find((m) => m.name === selectedRole || m.id === selectedRole);
+          const memberId = memberObj ? memberObj.id : (isLeeAlias(selectedRole) ? 'lee' : '');
+          const isApprover = Boolean(step.approverRole) && (
+            step.approverRole === selectedRole ||
+            isSameMember(step.approverRole, selectedRole, memberId) ||
+            (isLeeAlias(selectedRole) && isLeeAlias(step.approverRole))
+          );
+          const isGeneralApprover = (
+            !step.approverRole ||
+            step.approverRole === 'หัวหน้า/ผู้เกี่ยวข้อง' ||
+            step.approverRole === 'หัวหน้า' ||
+            step.approverRole === 'ผู้อนุมัติ'
+          ) && Boolean(memberObj?.canApprove || memberObj?.roleLevel === 'approver' || memberObj?.roleLevel === 'admin');
+
           const isMyRole = selectedRole !== 'all' && (
             step.assignedRole === selectedRole ||
             step.assignedPerson === selectedRole ||
-            step.assignedRole.includes(selectedRole) || 
-            step.assignedPerson.includes(selectedRole) ||
             (isLeeAlias(selectedRole) && (isLeeAlias(step.assignedRole) || isLeeAlias(step.assignedPerson))) ||
-            isSameMember(step.assignedRole, selectedRole) ||
-            isSameMember(step.assignedPerson, selectedRole) ||
-            (isWaiting && (
-              step.approverRole === selectedRole ||
-              step.approverRole?.includes(selectedRole) ||
-              selectedRole.includes(step.approverRole || '') ||
-              (isLeeAlias(selectedRole) && isLeeAlias(step.approverRole)) ||
-              isSameMember(step.approverRole, selectedRole)
-            ))
+            isSameMember(step.assignedRole, selectedRole, memberId) ||
+            isSameMember(step.assignedPerson, selectedRole, memberId) ||
+            (isWaiting && (isApprover || isGeneralApprover))
           );
 
           return (

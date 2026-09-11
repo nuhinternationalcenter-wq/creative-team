@@ -103,24 +103,29 @@ export const PersonalTasksView: React.FC<PersonalTasksViewProps> = ({
       const approver = t.approverRole || '';
       const creator = t.assignedBy || '';
       const isAssigned = (
-        assigned.toLowerCase() === selectedRole.toLowerCase() ||
-        assigned.includes(selectedRole) ||
-        selectedRole.includes(assigned) ||
-        (isLeeAlias(selectedRole) && isLeeAlias(assigned)) ||
-        isSameMember(assigned, selectedRole, memberId) ||
-        creator.toLowerCase() === selectedRole.toLowerCase() ||
-        creator.includes(selectedRole) ||
-        isSameMember(creator, selectedRole, memberId)
+        (assigned && (
+          assigned.toLowerCase() === selectedRole.toLowerCase() ||
+          isSameMember(assigned, selectedRole, memberId) ||
+          (isLeeAlias(selectedRole) && isLeeAlias(assigned))
+        )) ||
+        (creator && (
+          creator.toLowerCase() === selectedRole.toLowerCase() ||
+          isSameMember(creator, selectedRole, memberId)
+        ))
       );
-      const isWaitingApprovalForMe = (
-        t.status === 'waiting_approval' && (
-          approver.toLowerCase() === selectedRole.toLowerCase() ||
-          approver.includes(selectedRole) ||
-          selectedRole.includes(approver) ||
-          (isLeeAlias(selectedRole) && isLeeAlias(approver)) ||
-          isSameMember(approver, selectedRole, memberId)
-        )
+      const isApprover = Boolean(approver) && (
+        approver.toLowerCase() === selectedRole.toLowerCase() ||
+        (isLeeAlias(selectedRole) && isLeeAlias(approver)) ||
+        isSameMember(approver, selectedRole, memberId)
       );
+      const isGeneralApprover = (
+        !approver ||
+        approver === 'หัวหน้า/ผู้เกี่ยวข้อง' ||
+        approver === 'หัวหน้า' ||
+        approver === 'ผู้อนุมัติ'
+      ) && Boolean(selectedMemberObj?.canApprove || selectedMemberObj?.roleLevel === 'approver' || selectedMemberObj?.roleLevel === 'admin');
+
+      const isWaitingApprovalForMe = t.status === 'waiting_approval' && (isApprover || isGeneralApprover);
       return isAssigned || isWaitingApprovalForMe;
     });
   }, [personalTasks, selectedRole, memberId]);

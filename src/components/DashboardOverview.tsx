@@ -53,21 +53,32 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const filterStepsByRole = (steps: ChainStep[]) => {
     if (selectedRole === "all") return steps;
     return steps.filter(
-      (s) =>
-        s.assignedRole === selectedRole ||
-        s.assignedPerson === selectedRole ||
-        s.assignedRole.includes(selectedRole) ||
-        s.assignedPerson.includes(selectedRole) ||
-        (isLeeAlias(selectedRole) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson))) ||
-        isSameMember(s.assignedRole, selectedRole, memberId) ||
-        isSameMember(s.assignedPerson, selectedRole, memberId) ||
-        (s.status === 'waiting_approval' && (
+      (s) => {
+        const isAssigned = (
+          s.assignedRole === selectedRole ||
+          s.assignedPerson === selectedRole ||
+          (isLeeAlias(selectedRole) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson))) ||
+          isSameMember(s.assignedRole, selectedRole, memberId) ||
+          isSameMember(s.assignedPerson, selectedRole, memberId)
+        );
+
+        const isApprover = Boolean(s.approverRole) && (
           s.approverRole === selectedRole ||
-          s.approverRole?.includes(selectedRole) ||
-          selectedRole.includes(s.approverRole || '') ||
-          (isLeeAlias(selectedRole) && isLeeAlias(s.approverRole)) ||
-          isSameMember(s.approverRole, selectedRole, memberId)
-        ))
+          isSameMember(s.approverRole, selectedRole, memberId) ||
+          (isLeeAlias(selectedRole) && isLeeAlias(s.approverRole))
+        );
+
+        const isGeneralApprover = (
+          !s.approverRole ||
+          s.approverRole === 'หัวหน้า/ผู้เกี่ยวข้อง' ||
+          s.approverRole === 'หัวหน้า' ||
+          s.approverRole === 'ผู้อนุมัติ'
+        ) && Boolean(selectedMemberObj?.canApprove || selectedMemberObj?.roleLevel === 'approver' || selectedMemberObj?.roleLevel === 'admin');
+
+        const isWaitingApprovalForMember = s.status === 'waiting_approval' && (isApprover || isGeneralApprover);
+
+        return isAssigned || isWaitingApprovalForMember;
+      }
     );
   };
   

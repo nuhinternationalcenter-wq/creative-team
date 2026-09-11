@@ -61,7 +61,9 @@ function MainAppContent() {
               <div className="space-y-1">
                 <div className="flex items-center space-x-1.5">
                   <span className="text-xs font-bold text-emerald-400">ส่งต่องานเรียบร้อยแล้ว</span>
-                  <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">แจ้งเตือนแล้ว</span>
+                  <span className="text-[10px] bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 px-1.5 py-0.5 rounded font-medium">
+                    ส่งเฉพาะ: 👤 {toast.recipient}
+                  </span>
                 </div>
                 <p className="text-xs text-slate-200 leading-snug">{toast.message}</p>
                 <div className="text-[11px] text-slate-400 pt-0.5">
