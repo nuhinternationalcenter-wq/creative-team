@@ -650,15 +650,21 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!project) return project;
     const matchingPersonalTasks = (tasks || []).filter((t) => t && t.projectId === project.id);
 
-    // Remove any duplicate personal steps in project.steps that share title & assignee with matchingPersonalTasks
-    const personalTaskKeys = new Set(
-      matchingPersonalTasks.map((t) => `${t.title.trim().toLowerCase()}_${(t.assignedTo || '').trim().toLowerCase()}`)
-    );
-
-    const cleanSteps = project.steps.filter((s) => {
+    // Map existing steps in project.steps to latest personal task if matched
+    const cleanSteps = project.steps.map((s) => {
+      const matchingTask = matchingPersonalTasks.find((t) => t.id === s.id);
+      if (matchingTask) {
+        return mapPersonalTaskToStep(matchingTask, s.stepNumber);
+      }
+      return s;
+    }).filter((s) => {
       if (s.taskScope === 'personal') {
+        const matchingTask = matchingPersonalTasks.find((t) => t.id === s.id);
+        const personalTaskKeys = new Set(
+          matchingPersonalTasks.map((t) => `${t.title.trim().toLowerCase()}_${(t.assignedTo || '').trim().toLowerCase()}`)
+        );
         const key = `${s.title.trim().toLowerCase()}_${(s.assignedPerson || s.assignedRole || '').trim().toLowerCase()}`;
-        if (personalTaskKeys.has(key) && !matchingPersonalTasks.some((t) => t.id === s.id)) {
+        if (!matchingTask && personalTaskKeys.has(key)) {
           return false;
         }
       }
@@ -1088,7 +1094,9 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setProjects((prevProjects) =>
       prevProjects.map((proj) => {
-        if (proj.id !== projectId) return proj;
+        const containsStep = proj.steps.some((s) => s.id === stepId);
+        if (projectId && projectId !== 'all' && proj.id !== projectId && !containsStep) return proj;
+        if ((!projectId || projectId === 'all') && !containsStep) return proj;
 
         // 1. Mark target step completed
         const targetStep = proj.steps.find((s) => s.id === stepId);
@@ -1159,7 +1167,14 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // create a new active step in their column immediately!
         if (customNextAssignee) {
           const hasUnlockedForRecipient = newlyUnlockedSteps.some(
-            (s) => s.assignedRole.includes(customNextAssignee) || customNextAssignee.includes(s.assignedRole)
+            (s) =>
+              s.assignedRole === customNextAssignee ||
+              s.assignedPerson === customNextAssignee ||
+              isSameMember(s.assignedRole, customNextAssignee) ||
+              isSameMember(s.assignedPerson, customNextAssignee) ||
+              (isLeeAlias(customNextAssignee) && (isLeeAlias(s.assignedRole) || isLeeAlias(s.assignedPerson))) ||
+              s.assignedRole.includes(customNextAssignee) ||
+              customNextAssignee.includes(s.assignedRole)
           );
 
           if (!hasUnlockedForRecipient) {
@@ -1257,7 +1272,9 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setProjects((prev) =>
       prev.map((proj) => {
-        if (proj.id !== projectId) return proj;
+        const containsStep = proj.steps.some((s) => s.id === stepId);
+        if (projectId && projectId !== 'all' && proj.id !== projectId && !containsStep) return proj;
+        if ((!projectId || projectId === 'all') && !containsStep) return proj;
         return {
           ...proj,
           steps: proj.steps.map((step) => {
@@ -1423,7 +1440,9 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let newProjects: TeamChainProject[] = [];
     setProjects((prev) => {
       newProjects = prev.map((proj) => {
-        if (proj.id !== projectId) return proj;
+        const containsStep = proj.steps.some((s) => s.id === stepId);
+        if (projectId && projectId !== 'all' && proj.id !== projectId && !containsStep) return proj;
+        if ((!projectId || projectId === 'all') && !containsStep) return proj;
         const updatedSteps = proj.steps.filter((s) => s.id !== stepId);
         const completedCount = updatedSteps.filter((s) => s.status === 'completed').length;
         const progress = updatedSteps.length > 0 ? Math.round((completedCount / updatedSteps.length) * 100) : 0;
@@ -1473,7 +1492,9 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setProjects((prev) =>
       prev.map((proj) => {
-        if (proj.id !== projectId) return proj;
+        const containsStep = proj.steps.some((s) => s.id === stepId);
+        if (projectId && projectId !== 'all' && proj.id !== projectId && !containsStep) return proj;
+        if ((!projectId || projectId === 'all') && !containsStep) return proj;
         const targetStep = proj.steps.find((s) => s.id === stepId);
         if (!targetStep) return proj;
         stepTitle = targetStep.title;
@@ -1560,7 +1581,9 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setProjects((prev) =>
       prev.map((proj) => {
-        if (proj.id !== projectId) return proj;
+        const containsStep = proj.steps.some((s) => s.id === stepId);
+        if (projectId && projectId !== 'all' && proj.id !== projectId && !containsStep) return proj;
+        if ((!projectId || projectId === 'all') && !containsStep) return proj;
         const targetStep = proj.steps.find((s) => s.id === stepId);
         if (!targetStep) return proj;
         stepTitle = targetStep.title;
@@ -1639,7 +1662,9 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setProjects((prev) =>
       prev.map((proj) => {
-        if (proj.id !== projectId) return proj;
+        const containsStep = proj.steps.some((s) => s.id === stepId);
+        if (projectId && projectId !== 'all' && proj.id !== projectId && !containsStep) return proj;
+        if ((!projectId || projectId === 'all') && !containsStep) return proj;
         const targetStep = proj.steps.find((s) => s.id === stepId);
         if (!targetStep) return proj;
         stepTitle = targetStep.title;
@@ -1719,7 +1744,9 @@ export const WorkProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setProjects((prev) =>
       prev.map((proj) => {
-        if (proj.id !== projectId) return proj;
+        const containsStep = proj.steps.some((s) => s.id === stepId);
+        if (projectId && projectId !== 'all' && proj.id !== projectId && !containsStep) return proj;
+        if ((!projectId || projectId === 'all') && !containsStep) return proj;
         const targetStep = proj.steps.find((s) => s.id === stepId);
         if (!targetStep) return proj;
         stepTitle = targetStep.title;

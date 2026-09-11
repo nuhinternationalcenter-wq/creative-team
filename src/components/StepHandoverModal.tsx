@@ -77,8 +77,9 @@ export const StepHandoverModal: React.FC<StepHandoverModalProps> = ({
     if (!handoverComment.trim()) return;
 
     setSubmitting(true);
+    const targetProjectId = step.projectId || (project.id === 'all' ? '' : project.id);
     completeStepAndHandover(
-      project.id,
+      targetProjectId,
       step.id,
       handoverComment.trim(),
       Number(durationMinutes) || 0,
